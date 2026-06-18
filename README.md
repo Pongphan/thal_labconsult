@@ -1,1 +1,1 @@
-#Thal_labconsult Project
+Thal_labconsult Project
