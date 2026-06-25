@@ -38,10 +38,19 @@ PAGES: tuple[PageSpec, ...] = (
         title="PCR Allele Matching",
         path="pages/2_PCR_Allele_Matching.py",
         icon="🧬",
-        caption="α/β-globin allele panel, PCR gel review, confidence scoring, and couple risk.",
+        caption="α/β-globin allele panel intelligence and couple-risk modeling.",
         badge="Genotype",
     ),
 )
+
+
+def current_theme_type() -> str:
+    """Return Streamlit's active browser theme with a safe light fallback."""
+    try:
+        theme_type = str(st.context.theme.type).lower()
+    except (AttributeError, RuntimeError):
+        theme_type = "light"
+    return theme_type if theme_type in {"light", "dark"} else "light"
 
 
 def inject_css() -> None:
@@ -54,16 +63,24 @@ def inject_css() -> None:
             --plasma-100:#FFF1F2; --plasma-200:#FFE3E8; --marrow-100:#FFE9D6; --platelet:#F7B801;
             --oxygen:#11A8CD; --teal:#0E6B5A; --violet:#6D40D8; --ink:#24131A; --muted:#7B6570;
             --good:#0E8F68; --warn:#E8890C; --danger:#C91832; --paper:#FFFDFD;
+            --app-bg:
+                radial-gradient(circle at 0% 0%, rgba(215,38,61,.10), transparent 28%),
+                radial-gradient(circle at 100% 12%, rgba(247,184,1,.11), transparent 25%),
+                linear-gradient(180deg, #fffafa 0%, #fff8f8 58%, #fff 100%);
+            --surface:rgba(255,255,255,.82); --surface-strong:#FFFDFD; --surface-soft:#FFF3F5;
+            --surface-muted:#FFF8F8; --card-border:rgba(177,18,38,.14);
+            --card-shadow:rgba(63,2,8,.085); --heading:#3F0208; --body-text:#24131A;
+            --secondary-text:#654D58; --soft-text:#7B6570; --inverse-text:#FFFFFF;
+            --code-bg:#FFE3E8; --code-text:#8D0718;
+            color-scheme: light dark;
         }
         html, body, [class*="css"] {
             font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
         body {
-            background:
-                radial-gradient(circle at 0% 0%, rgba(215,38,61,.10), transparent 28%),
-                radial-gradient(circle at 100% 12%, rgba(247,184,1,.11), transparent 25%),
-                linear-gradient(180deg, #fffafa 0%, #fff8f8 58%, #fff 100%);
+            background: var(--app-bg);
         }
+        [data-testid="stAppViewContainer"] { background: var(--app-bg); color: var(--body-text); }
         .main .block-container { padding-top: 1.0rem; padding-bottom: 3.5rem; max-width: 1540px; }
 
         /* Real no-sidebar shell: native Streamlit sidebar and auto page navigation are hidden. */
@@ -103,6 +120,14 @@ def inject_css() -> None:
             box-shadow: 0 10px 24px rgba(177,18,38,.22);
             white-space: nowrap;
         }
+        .topbar-status { display:flex; align-items:center; justify-content:flex-end; gap:.5rem; flex-wrap:wrap; }
+        .theme-auto-badge {
+            display:inline-flex; align-items:center; gap:.4rem; border-radius:999px;
+            padding:.42rem .7rem; border:1px solid var(--card-border);
+            color:var(--secondary-text); background:var(--surface-soft);
+            font-weight:800; font-size:.76rem; white-space:nowrap;
+        }
+        .theme-auto-badge:before { content:"◐"; color:var(--blood-500); font-size:.95rem; }
 
         .hero-card {
             position: relative; overflow: hidden;
@@ -214,8 +239,94 @@ def inject_css() -> None:
         button[kind="primary"], .stDownloadButton button, .stButton button { border-radius:999px !important; font-weight:850 !important; }
         .stDataFrame, div[data-testid="stDataFrame"] { border-radius: 22px; overflow: hidden; }
         .footer-note { color: #806873; font-size: .82rem; text-align:center; margin: 2rem 0 .4rem; }
+
+        /* Shared semantic colors. The media query follows the browser/OS preference
+           automatically; Streamlit's native widgets use the paired config.toml themes. */
+        .app-topbar {
+            background: var(--surface);
+            border-color: var(--card-border);
+            box-shadow: 0 18px 46px var(--card-shadow);
+        }
+        .brand-title, .nav-title, .production-card .nav-title,
+        .metric-value, .section-title { color: var(--heading); }
+        .brand-caption, .nav-caption, .metric-caption { color: var(--secondary-text); }
+        .nav-strip-label, .pill { color: var(--heading); }
+        div[data-testid="stPageLink"] a {
+            background:
+              radial-gradient(circle at 12% 0%, rgba(215,38,61,.10), transparent 36%),
+              linear-gradient(180deg, var(--surface-strong), var(--surface-soft)) !important;
+            border-color: var(--card-border) !important;
+            box-shadow: 0 18px 46px var(--card-shadow) !important;
+            color: var(--heading) !important;
+        }
+        div[data-testid="stPageLink"] a code {
+            background: var(--code-bg); color: var(--code-text);
+        }
+        .glass-card {
+            background: var(--surface);
+            border-color: var(--card-border);
+            box-shadow: 0 16px 42px var(--card-shadow);
+            color: var(--body-text);
+        }
+        .dense-card {
+            background: linear-gradient(180deg, var(--surface-strong), var(--surface-soft));
+            border-color: var(--card-border); box-shadow: 0 10px 26px var(--card-shadow);
+            color: var(--body-text);
+        }
+        .production-card {
+            background:
+              radial-gradient(circle at 12% 0%, rgba(215,38,61,.10), transparent 36%),
+              linear-gradient(180deg, var(--surface-strong), var(--surface-soft));
+            border-color: var(--card-border); box-shadow: 0 18px 46px var(--card-shadow);
+            color: var(--body-text);
+        }
+        .metric-card {
+            background: linear-gradient(150deg, var(--surface-strong), var(--surface-soft));
+            border-color: var(--card-border); box-shadow: 0 18px 44px var(--card-shadow);
+        }
+        .metric-label, .subtle, .footer-note { color: var(--soft-text); }
+        .pill { background: var(--surface-strong); border-color: var(--card-border); box-shadow: 0 6px 16px var(--card-shadow); }
+        .flow-step { background: var(--surface-muted); border-color: var(--card-border); color: var(--body-text); }
+        .stTabs [data-baseweb="tab"] { background: var(--surface-soft); border-color: var(--card-border); color: var(--body-text); }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ink:#FFF4F6; --muted:#CDB7BF; --paper:#16090E;
+                --app-bg:
+                    radial-gradient(circle at 0% 0%, rgba(215,38,61,.18), transparent 30%),
+                    radial-gradient(circle at 100% 12%, rgba(109,64,216,.14), transparent 28%),
+                    linear-gradient(180deg, #11070B 0%, #16090E 58%, #0D0508 100%);
+                --surface:rgba(35,15,23,.86); --surface-strong:#241018; --surface-soft:#30131E;
+                --surface-muted:#1C0C12; --card-border:rgba(255,220,228,.15);
+                --card-shadow:rgba(0,0,0,.34); --heading:#FFF4F6; --body-text:#F9EDEF;
+                --secondary-text:#D8C1C8; --soft-text:#BFA7B1; --inverse-text:#FFFFFF;
+                --code-bg:#451725; --code-text:#FFD3DD;
+            }
+            .brand-mark { box-shadow: 0 14px 34px rgba(239,71,111,.24); }
+            .nav-strip-label span { background:#451725; color:#FFD3DD; }
+            .nav-card-current {
+                border-color:rgba(255,220,228,.18);
+                background:
+                  radial-gradient(circle at 90% 10%, rgba(247,184,1,.18), transparent 32%),
+                  linear-gradient(135deg, #2B0912, #650512 54%, #B11226 100%);
+            }
+            div[data-testid="stPageLink"] a:hover {
+                border-color:rgba(239,71,111,.48) !important;
+                box-shadow:0 24px 62px rgba(0,0,0,.42) !important;
+            }
+            .pill.red { background:#451725; color:#FFD3DD; }
+            .pill.gold { background:#44330C; color:#FFE49A; }
+            .pill.green { background:#103C31; color:#BDF4DF; }
+            .pill.blue { background:#0D3541; color:#BFEFFA; }
+            .pill.violet { background:#2C1D54; color:#DCCFFF; }
+            .warn-box { background:#3D2A08; color:#FFE6AB; }
+            .danger-box { background:#45121B; color:#FFD5DC; }
+            .success-box { background:#0D342A; color:#C6F5E5; }
+            .flow-index { background:#D7263D; }
+        }
         @media (max-width: 900px) {
             .app-topbar { align-items:flex-start; flex-direction: column; }
+            .topbar-status { justify-content:flex-start; }
             .active-module-badge { white-space: normal; }
             .nav-caption { min-height: auto; }
             div[data-testid="stPageLink"] a, .nav-card-current { min-height: auto !important; }
@@ -243,9 +354,12 @@ def top_navigation(active: str) -> None:
         <div class="app-topbar">
           <div class="brand-lockup">
             <div class="brand-mark">🩸</div>
-            <div><div class="brand-title">ThalLink Laboratory Intelligence</div><div class="brand-caption">Card-based clinical laboratory workspace · no sidebar navigation</div></div>
+            <div><div class="brand-title">ThalLink Laboratory Intelligence</div><div class="brand-caption"></div></div>
           </div>
-          <div class="active-module-badge">Active · {_e(active)}</div>
+          <div class="topbar-status">
+            <div class="theme-auto-badge">Auto theme · browser/OS</div>
+            <div class="active-module-badge">Active · {_e(active)}</div>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,

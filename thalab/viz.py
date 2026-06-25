@@ -5,20 +5,65 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from thalab.styles import current_theme_type
+
 BLOOD="#B11226"; DANGER="#C91832"; GOLD="#F7B801"; TEAL="#0E8F68"; BLUE="#11A8CD"; VIOLET="#6D40D8"; INK="#24131A"
 
 def _layout(fig: go.Figure, title: str | None = None, height: int = 420) -> go.Figure:
-    fig.update_layout(template="plotly_white", height=height, title={"text": title or "", "x":0.02, "xanchor":"left", "font":{"size":20,"color":INK}}, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(255,248,248,.55)", margin=dict(l=42,r=28,t=64 if title else 30,b=42), font=dict(family="Inter, Arial", color=INK), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    dark = current_theme_type() == "dark"
+    text = "#FFF4F6" if dark else INK
+    grid = "rgba(255,244,246,.13)" if dark else "rgba(63,2,8,.10)"
+    plot_bg = "rgba(36,16,24,.72)" if dark else "rgba(255,248,248,.55)"
+    fig.update_layout(
+        template="plotly_dark" if dark else "plotly_white",
+        height=height,
+        title={"text": title or "", "x":0.02, "xanchor":"left", "font":{"size":20,"color":text}},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor=plot_bg,
+        margin=dict(l=42,r=28,t=64 if title else 30,b=42),
+        font=dict(family="Inter, Arial", color=text),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hoverlabel=dict(
+            bgcolor="#2A111A" if dark else "#FFF8FA",
+            bordercolor="rgba(255,244,246,.18)" if dark else "rgba(63,2,8,.18)",
+            font=dict(color=text),
+        ),
+    )
+    fig.update_xaxes(gridcolor=grid, zerolinecolor=grid)
+    fig.update_yaxes(gridcolor=grid, zerolinecolor=grid)
+    if "polar" in fig.layout:
+        fig.update_layout(polar=dict(bgcolor=plot_bg))
     return fig
 
 def risk_gauge(score: float, title: str = "Consult score") -> go.Figure:
-    fig = go.Figure(go.Indicator(mode="gauge+number+delta", value=float(score), number={"suffix":" / 100", "font":{"size":42}}, delta={"reference":45, "increasing":{"color":DANGER}, "decreasing":{"color":TEAL}}, gauge={"axis":{"range":[0,100]}, "bar":{"color":BLOOD}, "bgcolor":"white", "borderwidth":1, "bordercolor":"rgba(177,18,38,.18)", "steps":[{"range":[0,45],"color":"#DFF7EF"},{"range":[45,75],"color":"#FFF0C6"},{"range":[75,100],"color":"#FFDDE4"}], "threshold":{"line":{"color":DANGER,"width":5},"thickness":.78,"value":75}}))
+    dark = current_theme_type() == "dark"
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number+delta",
+            value=float(score),
+            number={"suffix":" / 100", "font":{"size":42}},
+            delta={"reference":45, "increasing":{"color":DANGER}, "decreasing":{"color":TEAL}},
+            gauge={
+                "axis":{"range":[0,100]},
+                "bar":{"color":BLOOD},
+                "bgcolor":"#241018" if dark else "white",
+                "borderwidth":1,
+                "bordercolor":"rgba(255,244,246,.16)" if dark else "rgba(177,18,38,.18)",
+                "steps":[
+                    {"range":[0,45],"color":"#174C3D" if dark else "#DFF7EF"},
+                    {"range":[45,75],"color":"#55410E" if dark else "#FFF0C6"},
+                    {"range":[75,100],"color":"#5A1A27" if dark else "#FFDDE4"},
+                ],
+                "threshold":{"line":{"color":DANGER,"width":5},"thickness":.78,"value":75},
+            },
+        )
+    )
     return _layout(fig, title, 360)
 
 def score_radar(scores: dict[str, float]) -> go.Figure:
     labels=list(scores.keys()); values=[float(scores[k]) for k in labels]
     fig=go.Figure(go.Scatterpolar(r=values+[values[0]], theta=labels+[labels[0]], fill="toself", name="Phenotype score", line=dict(width=4, color=BLOOD)))
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0,100], gridcolor="rgba(177,18,38,.15)"), bgcolor="rgba(255,248,248,.6)"), showlegend=False)
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0,100], gridcolor="rgba(177,18,38,.15)")), showlegend=False)
     return _layout(fig, "Phenotype score radar", 430)
 
 def hb_fraction_donut(hba: float, hba2: float, hbf: float, hbe: float) -> go.Figure:

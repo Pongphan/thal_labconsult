@@ -26,7 +26,7 @@ top_navigation("Command center")
 
 hero(
     "ThalLink: Thalassemia Laboratory Intelligence Platform",
-    "A hematology-focused Streamlit application for thalassemia screening interpretation, reflex-test planning, PCR allele matching, virtual gel review, and reproductive-risk consultation.",
+    "A hematology-focused Streamlit application for thalassemia screening interpretation, reflex-test planning, molecular panel intelligence, and reproductive-risk consultation.",
     "Expert web application blueprint",
 )
 
@@ -38,7 +38,7 @@ with c1:
 with c2:
     metric_card("Modules", "2", "Screening consult + PCR allele matching", "high")
 with c3:
-    metric_card("Visual layers", "12+", "Gauge, radar, Sankey, HPLC, gel, heatmap", "moderate")
+    metric_card("Visual layers", "10+", "Gauge, radar, Sankey, HPLC, panel and risk charts", "moderate")
 with c4:
     metric_card("Batch ready", "CSV", "Population dashboard + downloads", "low")
 
@@ -60,10 +60,10 @@ with col_a:
 with col_b:
     module_launch_card(
         "PCR Allele Matching",
-        "Molecular hematology workspace for α/β-globin allele panels, PCR band review, confidence scoring, and couple-risk counseling.",
+        "Molecular hematology workspace for α/β-globin allele panel intelligence and couple-risk counseling.",
         [
             "Gap-PCR / ARMS-PCR / sequencing-ready target knowledge base",
-            "Editable band-call sheet, virtual gel, tolerance sensitivity",
+            "Panel coverage, molecular methods, and amplicon-size review",
             "Punnett risk board for α- and β-globin genotype combinations",
         ],
         "pages/2_PCR_Allele_Matching.py",
@@ -78,7 +78,7 @@ st.markdown(
   <div class="flow-step"><span class="flow-index">1</span><div><b>Screening layer:</b> CBC indices, smear clues, OF/DCIP, ferritin, HbA/HbA2/HbF/HbE fractions.</div></div>
   <div class="flow-step"><span class="flow-index">2</span><div><b>Interpretive engine:</b> explainable laboratory rules for β-thalassemia trait, α-thalassemia/HbH pattern, HbE, and iron deficiency or mixed microcytosis.</div></div>
   <div class="flow-step"><span class="flow-index">3</span><div><b>Reflex planning:</b> HBB panel/sequencing, HBA1/HBA2 deletion-duplication, HbE confirmation, and partner testing.</div></div>
-  <div class="flow-step"><span class="flow-index">4</span><div><b>Molecular module:</b> targeted PCR/gap-PCR/ARMS-PCR matching, virtual gel, allele confidence, and Punnett risk modeling.</div></div>
+  <div class="flow-step"><span class="flow-index">4</span><div><b>Molecular module:</b> targeted PCR/gap-PCR/ARMS-PCR panel intelligence and Punnett risk modeling.</div></div>
 </div>
 """,
     unsafe_allow_html=True,
@@ -86,11 +86,15 @@ st.markdown(
 
 section("Embedded demo population", "Use the built-in data to verify dashboard behavior before uploading local laboratory data.")
 demo = analyze_dataframe(example_screening_dataframe())
+
+"""
 left, right = st.columns([1.1, 0.9])
 with left:
     st.plotly_chart(population_sankey(demo), use_container_width=True)
 with right:
     st.plotly_chart(batch_mcv_hba2_scatter(demo), use_container_width=True)
+"""
+st.plotly_chart(population_sankey(demo), use_container_width=True)
 
 section("Platform Roadmap")
 p1, p2, p3 = st.columns(3)
