@@ -28,7 +28,6 @@ from thalab.styles import (
 )
 from thalab.viz import (
     allele_method_bar,
-    risk_probability_bar,
 )
 
 
@@ -470,17 +469,7 @@ def render_couple_risk_results(
     with k5:
         metric_card("Risk classes", str(len(risk)), "Phenotype groups", "info")
 
-    st.plotly_chart(risk_probability_donut(result), use_container_width=True, theme=None)
-
-    r3, r4 = st.columns([1, 1])
-    with r3:
-        try:
-            st.plotly_chart(risk_probability_bar(result), use_container_width=True, theme=None)
-        except Exception:
-            st.plotly_chart(risk_probability_donut(result), use_container_width=True, theme=None)
-    with r4:
-        st.plotly_chart(genotype_outcome_sunburst(result), use_container_width=True, theme=None)
-
+    st.markdown('<div style="height: 0.85rem;"></div>', unsafe_allow_html=True)
     with st.expander(f"{system_label}-globin offspring genotype evidence table", expanded=True):
         risk_table = genotype_evidence_table(result)
         st.dataframe(risk_table, use_container_width=True, hide_index=True)
@@ -492,6 +481,12 @@ def render_couple_risk_results(
             use_container_width=True,
             key=f"{system}_risk_download",
         )
+
+    donut_col, sunburst_col = st.columns([1, 1])
+    with donut_col:
+        st.plotly_chart(risk_probability_donut(result), use_container_width=True, theme=None)
+    with sunburst_col:
+        st.plotly_chart(genotype_outcome_sunburst(result), use_container_width=True, theme=None)
 
     if high_risk > 0:
         clinical_box(
