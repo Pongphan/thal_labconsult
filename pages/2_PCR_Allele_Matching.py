@@ -412,6 +412,101 @@ def genotype_evidence_table(result: pd.DataFrame) -> pd.DataFrame:
     return result[keep] if keep else result
 
 
+def _default_genotype_index(system: str, parent: int, labels: list[str]) -> int:
+    if not labels:
+        return 0
+    if system == "alpha":
+        default_index = 3 if parent == 1 else 1
+    else:
+        default_index = 1 if parent == 1 else 2
+    return min(default_index, len(labels) - 1)
+
+
+def select_parent_genotypes(system: str, genotype_db: dict[str, list[str]]) -> tuple[str, str, list[str], list[str]]:
+    labels = list(genotype_db.keys())
+    system_label = system.title()
+    st.markdown(f"#### {system_label}-globin")
+    p1_label = st.selectbox(
+        f"{system_label} parent 1 genotype",
+        labels,
+        index=_default_genotype_index(system, 1, labels),
+        key=f"{system}_parent1_genotype",
+    )
+    p2_label = st.selectbox(
+        f"{system_label} parent 2 genotype",
+        labels,
+        index=_default_genotype_index(system, 2, labels),
+        key=f"{system}_parent2_genotype",
+    )
+    return p1_label, p2_label, genotype_db[p1_label], genotype_db[p2_label]
+
+
+def render_couple_risk_results(
+    system: str,
+    p1_label: str,
+    p2_label: str,
+    p1: list[str],
+    p2: list[str],
+) -> pd.DataFrame:
+    system_label = system.title()
+    result = punnett(p1, p2, system).copy()
+    risk = summarize_risk(result)
+    high_risk = float(risk.get("critical", 0) + risk.get("high", 0))
+
+    section(
+        f"{system_label}-globin offspring risk",
+        f"Predicted offspring outcomes from the selected {system}-globin parental genotypes.",
+    )
+
+    k1, k2, k3, k4, k5 = st.columns(5)
+    with k1:
+        metric_card("Parent 1 gametes", " / ".join(map(str, p1)), p1_label, "info")
+    with k2:
+        metric_card("Parent 2 gametes", " / ".join(map(str, p2)), p2_label, "info")
+    with k3:
+        metric_card("High/Critical", f"{high_risk:.0f}%", "Offspring probability", "high" if high_risk else "low")
+    with k4:
+        metric_card("Outcomes", str(result.shape[0]), "Gamete combinations", "moderate")
+    with k5:
+        metric_card("Risk classes", str(len(risk)), "Phenotype groups", "info")
+
+    st.plotly_chart(risk_probability_donut(result), use_container_width=True, theme=None)
+
+    r3, r4 = st.columns([1, 1])
+    with r3:
+        try:
+            st.plotly_chart(risk_probability_bar(result), use_container_width=True, theme=None)
+        except Exception:
+            st.plotly_chart(risk_probability_donut(result), use_container_width=True, theme=None)
+    with r4:
+        st.plotly_chart(genotype_outcome_sunburst(result), use_container_width=True, theme=None)
+
+    with st.expander(f"{system_label}-globin offspring genotype evidence table", expanded=True):
+        risk_table = genotype_evidence_table(result)
+        st.dataframe(risk_table, use_container_width=True, hide_index=True)
+        st.download_button(
+            f"Download {system}-globin couple-risk table",
+            result.to_csv(index=False).encode("utf-8"),
+            f"{system}_globin_couple_risk_expert.csv",
+            "text/csv",
+            use_container_width=True,
+            key=f"{system}_risk_download",
+        )
+
+    if high_risk > 0:
+        clinical_box(
+            f"<b>Genetic counseling alert:</b> selected {system}-globin parental genotypes produce {high_risk:.0f}% high/critical offspring risk in this simplified Mendelian model. Confirm genotype calls, verify phase, and refer for formal genetic counseling before clinical action.",
+            "danger",
+        )
+    else:
+        clinical_box(
+            f"No high/critical offspring-risk class was generated from the selected {system}-globin genotype pair. This does not exclude variants outside the selected panel, compound heterozygosity not represented in the demonstration database, or non-thalassemia hemoglobinopathies.",
+            "success",
+        )
+
+    return result
+
+
 # -----------------------------------------------------------------------------
 # Page body
 # -----------------------------------------------------------------------------
@@ -526,71 +621,18 @@ with tabs[0]:
 with tabs[1]:
     section(
         "Couple genotype reproductive-risk board",
-        "Select confirmed or inferred parental genotypes. The board converts gamete combinations into offspring genotype, phenotype, and risk-class visual analytics.",
+        "Review confirmed or inferred parental genotypes across alpha- and beta-globin systems. The board converts gamete combinations into offspring genotype, phenotype, and risk-class visual analytics.",
     )
 
-    system = st.radio("Globin system", ["alpha", "beta"], horizontal=True)
-    genotype_db = ALPHA_GENOTYPES if system == "alpha" else BETA_GENOTYPES
-    genotype_labels = list(genotype_db.keys())
+    alpha_inputs, beta_inputs = st.columns(2)
+    with alpha_inputs:
+        alpha_p1_label, alpha_p2_label, alpha_p1, alpha_p2 = select_parent_genotypes("alpha", ALPHA_GENOTYPES)
+    with beta_inputs:
+        beta_p1_label, beta_p2_label, beta_p1, beta_p2 = select_parent_genotypes("beta", BETA_GENOTYPES)
 
-    c1, c2 = st.columns(2)
-    with c1:
-        default_p1 = min(3, len(genotype_labels) - 1) if system == "alpha" else min(1, len(genotype_labels) - 1)
-        p1_label = st.selectbox("Parent 1 genotype", genotype_labels, index=default_p1)
-    with c2:
-        default_p2 = min(1, len(genotype_labels) - 1) if system == "alpha" else min(2, len(genotype_labels) - 1)
-        p2_label = st.selectbox("Parent 2 genotype", genotype_labels, index=default_p2)
-
-    p1, p2 = genotype_db[p1_label], genotype_db[p2_label]
-    result = punnett(p1, p2, system).copy()
-    risk = summarize_risk(result)
-    high_risk = float(risk.get("critical", 0) + risk.get("high", 0))
-    any_risk = sum(v for v in risk.values()) if risk else 0
-
-    k1, k2, k3, k4, k5 = st.columns(5)
-    with k1:
-        metric_card("Parent 1 gametes", " / ".join(map(str, p1)), p1_label, "info")
-    with k2:
-        metric_card("Parent 2 gametes", " / ".join(map(str, p2)), p2_label, "info")
-    with k3:
-        metric_card("High/Critical", f"{high_risk:.0f}%", "Offspring probability", "high" if high_risk else "low")
-    with k4:
-        metric_card("Outcomes", str(result.shape[0]), "Gamete combinations", "moderate")
-    with k5:
-        metric_card("Risk classes", str(len(risk)), "Phenotype groups", "info")
-
-    st.plotly_chart(risk_probability_donut(result), use_container_width=True, theme=None)
-
-    r3, r4 = st.columns([1, 1])
-    with r3:
-        try:
-            st.plotly_chart(risk_probability_bar(result), use_container_width=True, theme=None)
-        except Exception:
-            st.plotly_chart(risk_probability_donut(result), use_container_width=True, theme=None)
-    with r4:
-        st.plotly_chart(genotype_outcome_sunburst(result), use_container_width=True, theme=None)
-
-    with st.expander("Offspring genotype evidence table", expanded=True):
-        risk_table = genotype_evidence_table(result)
-        st.dataframe(risk_table, use_container_width=True, hide_index=True)
-        st.download_button(
-            "⬇️ Download couple-risk table",
-            result.to_csv(index=False).encode("utf-8"),
-            f"{system}_globin_couple_risk_expert.csv",
-            "text/csv",
-            use_container_width=True,
-        )
-
-    if high_risk > 0:
-        clinical_box(
-            f"<b>Genetic counseling alert:</b> selected parental genotypes produce {high_risk:.0f}% high/critical offspring risk in this simplified Mendelian model. Confirm genotype calls, verify phase, and refer for formal genetic counseling before clinical action.",
-            "danger",
-        )
-    else:
-        clinical_box(
-            "No high/critical offspring-risk class was generated from the selected genotype pair. This does not exclude variants outside the selected panel, compound heterozygosity not represented in the demonstration database, or non-thalassemia hemoglobinopathies.",
-            "success",
-        )
+    render_couple_risk_results("alpha", alpha_p1_label, alpha_p2_label, alpha_p1, alpha_p2)
+    st.divider()
+    render_couple_risk_results("beta", beta_p1_label, beta_p2_label, beta_p1, beta_p2)
 
 
 # -----------------------------------------------------------------------------
