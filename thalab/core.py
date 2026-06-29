@@ -8,10 +8,19 @@ import pandas as pd
 SCREENING_COLUMNS = ["sample_id","age","sex","hb_g_dl","rbc_10e12_l","hct_percent","mcv_fl","mch_pg","mchc_g_dl","rdw_percent","retic_percent","ferritin_ng_ml","hba_percent","hba2_percent","hba2e_percent","hbf_percent","hbe_percent","oft","dcip","hbh_inclusion","transfusion_recent","pregnant","smear_target_cells","family_history"]
 DEFAULT_THRESHOLDS = {"mcv_microcytosis":80.0,"mch_hypochromia":27.0,"hba2_beta_trait":3.5,"hbf_elevated":1.0,"hbe_present":10.0,"ferritin_deficient":15.0,"ferritin_borderline":30.0,"rbc_high":5.0,"mentzer_beta_like":13.0,"rdw_high":15.0,"severe_hb":7.0}
 
+def is_missing(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip() == "" or value.strip().lower() in {"nan","na","none","null"}
+    try:
+        return bool(pd.isna(value))
+    except Exception:
+        return False
+
 def safe_num(value: Any, default: float = np.nan) -> float:
     try:
-        if value is None or value == "": return default
-        if isinstance(value, str) and value.strip().lower() in {"nan","na","none","null"}: return default
+        if is_missing(value): return default
         return float(value)
     except Exception:
         return default
@@ -83,8 +92,8 @@ def analyze_screening(row: dict[str, Any] | pd.Series, thresholds: dict[str, flo
     if np.isnan(safe_num(n.get("hba2e_percent"))) and not np.isnan(first_hba2):
         n["hba2e_percent"] = first_hba2
 
-    n["sample_id"] = str(n.get("sample_id") if n.get("sample_id") not in [None, ""] else "CASE-001")
-    n["sex"] = str(n.get("sex") if n.get("sex") not in [None, ""] else "Not specified")
+    n["sample_id"] = str(n.get("sample_id")) if not is_missing(n.get("sample_id")) else "CASE-001"
+    n["sex"] = str(n.get("sex")) if not is_missing(n.get("sex")) else "Not specified"
     for k in ["oft","dcip","hbh_inclusion"]: n[k] = normalize_call(n.get(k))
     for k in ["transfusion_recent","pregnant","smear_target_cells","family_history"]: n[k] = yn(n.get(k))
     # อย่าลืมเพิ่ม hba2e_percent ในบรรทัด safe_num ด้วย
@@ -141,75 +150,23 @@ def analyze_screening(row: dict[str, Any] | pd.Series, thresholds: dict[str, flo
     # ถ้าระบบเจอค่าในช่องใหม่ให้ใช้ช่องใหม่ ถ้าไม่เจอให้ไปดึงจากช่อง hba2 หรือ hbe
     final_hba2e = hba2e_val if not np.isnan(hba2e_val) else (hba2 if not np.isnan(hba2) else (hbe if not np.isnan(hbe) else np.nan))
 
-    # ---------------------------------------------------------
-    # การนำเกณฑ์ Hb Typing ของคุณมาใช้ตัดสินและครอบทับ (Override) ตามตาราง Excel
-    # ---------------------------------------------------------
-    hba2e_val = n.get("hba2e_percent", np.nan)
-    # ถ้าระบบเจอค่าในช่องใหม่ให้ใช้ช่องใหม่ ถ้าไม่เจอให้ไปดึงจากช่อง hba2 หรือ hbe
-    final_hba2e = hba2e_val if not np.isnan(hba2e_val) else (hba2 if not np.isnan(hba2) else (hbe if not np.isnan(hbe) else np.nan))
-    
-    # ดึงค่า HbA และ HbF มาใช้งาน
-    hb_a = n.get("hba_percent", np.nan)
-    hb_f = n.get("hbf_percent", np.nan)
-
-    # ฟังก์ชันช่วยตรวจสอบช่วงค่า (ปลอดภัยเมื่อเจอค่าว่างหรือ NaN)
-    def in_range(val, min_val, max_val):
-        if np.isnan(val): return False
-        return min_val <= val <= max_val
-
     if not np.isnan(final_hba2e):
-        # 1. > 95%, <= 3.5%, <=1% -> A2A (Non-clinically significant / suspected alpha)
-        if (np.isnan(hb_a) or hb_a > 95) and final_hba2e <= 3.5 and (np.isnan(hb_f) or hb_f <= 1):
-            top_pattern = "Non-clinically significant thalassemia/suspected alpha thalassemia (A2A)"
-            risk = "Low / inconclusive"
-            
-        # 2. 85-95%, 3.5-8%, <5% -> A2A (beta-thalassemia trait)
-        elif in_range(hb_a, 85, 95) and in_range(final_hba2e, 3.5, 8.0) and (np.isnan(hb_f) or hb_f < 5):
-            top_pattern = "beta-thalassemia trait with or without alpha-thalassemia (A2A)"
+        if hbe_present or final_hba2e > 25:
+            top_pattern = "Suspected Hb E / β-globin structural variant pattern"
+            risk = "High"; consult_score = max(consult_score, hbe_score, 75.0)
+        elif t["hba2_beta_trait"] <= final_hba2e <= 10:
+            top_pattern = "Suspected Beta-Thalassemia Trait with or without alpha-thalassemia"
             risk = "High"; consult_score = 100.0
-            
-        # 8 & 9. 85-95%, 1.0-1.5%, <=1% -> Suspected Hb H / Hb H-CS/PS disease
-        elif in_range(hb_a, 85, 95) and in_range(final_hba2e, 1.0, 1.5) and (np.isnan(hb_f) or hb_f <= 1):
-            top_pattern = "Suspected Hb H disease / Hb H-CS/PS disease (ขึ้นแถบ Bart's H / CS/PS)"
+        elif not np.isnan(hbf) and hbf > 5:
+            top_pattern = "Suspected Beta-Thalassemia or HPFH"
             risk = "High"; consult_score = 100.0
-            
-        # 3. 75-85%, <25%, 1-2% -> EA (Suspected Hb E trait)
-        elif in_range(hb_a, 75, 85) and final_hba2e < 25 and in_range(hb_f, 1, 2):
-            top_pattern = "Suspected Hb E trait with or without alpha-thalassemia (EA)"
-            risk = "High"; consult_score = 100.0
-            
-        # 4. 70-75%, >= 25%, 1-2% -> EA (Hb E trait)
-        elif in_range(hb_a, 70, 75) and final_hba2e >= 25 and in_range(hb_f, 1, 2):
-            top_pattern = "Hb E trait (EA)"
-            risk = "High"; consult_score = 100.0
-            
-        # 7. 5-30%, ปานกลาง-สูง, 10-40% -> EFA (beta+-thalassemia/Hb E disease)
-        elif in_range(hb_a, 5, 30) and in_range(hb_f, 10, 40):
-            top_pattern = "beta+-thalassemia/Hb E disease (EFA)"
-            risk = "High"; consult_score = 100.0
-            
-        # 5. 0%, >= 80%, <5% -> EE (Homozygous Hb E)
-        elif (np.isnan(hb_a) or hb_a == 0) and final_hba2e >= 80 and (np.isnan(hb_f) or hb_f < 5):
-            top_pattern = "Homozygous Hb E with or without alpha-thalassemia (EE)"
-            risk = "High"; consult_score = 100.0
-            
-        # 6. 0%, ปานกลาง-สูง, 40-60% -> EF (beta0-thalassemia/Hb E disease)
-        elif (np.isnan(hb_a) or hb_a == 0) and in_range(hb_f, 40, 60):
-            top_pattern = "beta0-thalassemia/Hb E disease (EF)"
-            risk = "High"; consult_score = 100.0
-            
-        # 10. 0%, 5.5 +/- 1.5%, 95 +/- 1.5% -> A2F (Homozygous beta-thalassemia)
-        # อนุโลมช่วง HbF ที่ประมาณ 93.5 - 96.5% และ HbA2 ที่ 4 - 7%
-        elif (np.isnan(hb_a) or hb_a == 0) and in_range(final_hba2e, 4.0, 7.0) and in_range(hb_f, 93.5, 96.5):
-            top_pattern = "Homozygous beta-thalassemia (A2F)"
-            risk = "High"; consult_score = 100.0
-
         else:
-            # กรณีที่ไม่เข้าเกณฑ์ใดๆ ด้านบน จะยึดตามการทายผลเบื้องต้นของระบบเดิม
-            pass
-
-        # บันทึกหลักฐานพร้อมค่าพารามิเตอร์จริงที่ใช้วิเคราะห์
-        evidence.append(f"Hb Typing Interpreted: {top_pattern} (HbA: {hb_a if not np.isnan(hb_a) else 'N/A'}%, HbA2/E: {final_hba2e:g}%, HbF: {hb_f if not np.isnan(hb_f) else 'N/A'}%)")
+            # กรณีที่ไม่เข้าเกณฑ์ฟันธงด้านบน หากระบบเดิมไม่ได้ทายว่าเป็น Alpha หรือ IDA ให้สรุปเป็น Normal
+            if top_pattern not in ["α-thalassemia carrier / HbH-spectrum pattern", "Iron deficiency or mixed microcytosis pattern"]:
+                top_pattern = "Normal Hb Typing Pattern (AA)"
+                risk = "Low / inconclusive"
+        
+        evidence.append(f"Hb Typing Interpreted: {top_pattern} (HbA2/E: {final_hba2e:g}%)")
 
     if not evidence: evidence.append("No strong abnormal screening pattern was detected from the supplied values.")
     
@@ -234,6 +191,9 @@ def analyze_dataframe(df: pd.DataFrame, thresholds: dict[str, float] | None = No
     work = df.copy()
     for col in SCREENING_COLUMNS:
         if col not in work.columns: work[col] = np.nan
+    for i, value in enumerate(work["sample_id"]):
+        if is_missing(value):
+            work.at[work.index[i], "sample_id"] = f"CASE-{i+1:03d}"
     return pd.DataFrame([analyze_screening(row, thresholds).to_flat_dict() for _, row in work.iterrows()])
 
 def example_screening_dataframe() -> pd.DataFrame:

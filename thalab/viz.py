@@ -11,9 +11,9 @@ BLOOD="#B11226"; DANGER="#C91832"; GOLD="#F7B801"; TEAL="#0E8F68"; BLUE="#11A8CD
 
 def _layout(fig: go.Figure, title: str | None = None, height: int = 420) -> go.Figure:
     dark = current_theme_type() == "dark"
-    text = "#FFF4F6" if dark else INK
-    grid = "rgba(255,244,246,.13)" if dark else "rgba(63,2,8,.10)"
-    plot_bg = "rgba(36,16,24,.72)" if dark else "rgba(255,248,248,.55)"
+    text = "#F5FAFC" if dark else "#17212B"
+    grid = "rgba(255,255,255,.12)" if dark else "rgba(36,48,63,.12)"
+    plot_bg = "rgba(255,255,255,.04)" if dark else "rgba(255,255,255,.22)"
     fig.update_layout(
         template="plotly_dark" if dark else "plotly_white",
         height=height,
@@ -24,8 +24,8 @@ def _layout(fig: go.Figure, title: str | None = None, height: int = 420) -> go.F
         font=dict(family="Inter, Arial", color=text),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         hoverlabel=dict(
-            bgcolor="#2A111A" if dark else "#FFF8FA",
-            bordercolor="rgba(255,244,246,.18)" if dark else "rgba(63,2,8,.18)",
+            bgcolor="rgba(16,24,32,.92)" if dark else "rgba(255,255,255,.92)",
+            bordercolor="rgba(255,255,255,.18)" if dark else "rgba(36,48,63,.16)",
             font=dict(color=text),
         ),
     )

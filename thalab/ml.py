@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .core import derived_indices, safe_num
+from .core import derived_indices, is_missing, safe_num
 
 ML_FEATURE_COLUMNS = [
     "hb_g_dl",
@@ -111,7 +111,10 @@ def ml_feature_matrix(df: pd.DataFrame) -> pd.DataFrame:
     """Return a clean, explicit feature table for downstream ML deployment."""
     rows: list[dict[str, float | str]] = []
     for _, row in df.iterrows():
-        record: dict[str, float | str] = {"sample_id": str(row.get("sample_id", f"CASE-{len(rows)+1:03d}"))}
+        sample_id = row.get("sample_id", "")
+        record: dict[str, float | str] = {
+            "sample_id": str(sample_id) if not is_missing(sample_id) else f"CASE-{len(rows)+1:03d}"
+        }
         record["hb_g_dl"] = _first_num(row, ["hb_g_dl", "Hb", "hb"])
         record["rbc_10e12_l"] = _first_num(row, ["rbc_10e12_l", "RBC", "rbc"])
         record["mcv_fl"] = _first_num(row, ["mcv_fl", "MCV", "mcv"])

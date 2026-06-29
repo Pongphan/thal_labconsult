@@ -38,7 +38,7 @@ A production-oriented Streamlit web application for thalassemia screening interp
 ## Installation
 
 ```bash
-cd thal_lab
+cd thal_labconsult
 python -m venv .venv
 
 # Windows
@@ -50,6 +50,20 @@ source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+From the repository root you can also run:
+
+```bash
+pip install -r thal_labconsult/requirements.txt
+streamlit run thal_labconsult/app.py
+```
+
+## Streamlit Community Cloud deployment
+
+- Repository: select this repository.
+- Main file path: `thal_labconsult/app.py`
+- Dependency file: Streamlit will install `thal_labconsult/requirements.txt`.
+- Config file: `.streamlit/config.toml` is kept at the repository root, which is where Streamlit Community Cloud reads app configuration for subdirectory apps.
 
 ## Data examples
 
@@ -67,7 +81,7 @@ thalab/ml.py                            # ML-ready feature matrix + prototype si
 thalab/genetics.py                      # Allele database, PCR matching, Punnett models
 thalab/styles.py                        # No-sidebar design system + same-tab card navigation
 thalab/viz.py                           # Plotly visual analytics
-.streamlit/config.toml                  # Theme + hidden Streamlit sidebar navigation
+.streamlit/config.toml                  # Repository-root theme configuration for Streamlit Cloud
 ```
 
 ## Production validation notes

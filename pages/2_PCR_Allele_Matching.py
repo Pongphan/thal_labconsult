@@ -69,42 +69,42 @@ def inject_expert_css() -> None:
         """
         <style>
         :root {
-            --pcr-border: rgba(63,2,8,.14);
-            --pcr-soft-border: rgba(177,18,38,.13);
-            --pcr-panel-bg: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,241,244,.84));
-            --pcr-step-bg: linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,236,240,.74));
-            --pcr-hero-bg:
-              radial-gradient(circle at top left, rgba(255,200,87,.20), transparent 32%),
-              radial-gradient(circle at top right, rgba(77,225,255,.13), transparent 30%),
-              linear-gradient(145deg, rgba(255,253,253,.98), rgba(255,235,240,.91));
-            --pcr-heading: #3F0208;
-            --pcr-text: #4F3640;
-            --pcr-muted: #7B6570;
-            --pcr-shadow: rgba(63,2,8,.11);
-            --pcr-tab-bg: linear-gradient(135deg, rgba(179,18,55,.10), rgba(123,97,255,.08));
+            --pcr-border: var(--glass-border);
+            --pcr-soft-border: var(--glass-border);
+            --pcr-panel-bg: var(--glass-bg);
+            --pcr-step-bg: var(--glass-bg-soft);
+            --pcr-hero-bg: var(--glass-bg-strong);
+            --pcr-heading: var(--heading);
+            --pcr-text: var(--secondary-text);
+            --pcr-muted: var(--soft-text);
+            --pcr-shadow: var(--card-shadow);
+            --pcr-tab-bg: rgba(255,255,255,.48);
         }
         div[data-testid="stTabs"] button[role="tab"] {
-            border-radius: 999px !important;
+            border-radius: var(--radius-sm) !important;
             border: 1px solid var(--pcr-soft-border) !important;
             padding: .58rem 1.08rem !important;
             background: var(--pcr-tab-bg);
             color: var(--pcr-heading);
             margin-right: .35rem;
+            box-shadow: inset 0 1px 0 var(--glass-highlight);
         }
         div[data-testid="stTabs"] button[aria-selected="true"] {
-            background: linear-gradient(135deg, #B31237, #7B61FF) !important;
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2) 58%, var(--accent-3)) !important;
             color: #fff !important;
-            box-shadow: 0 0 26px rgba(227,52,85,.30);
+            box-shadow: 0 14px 34px rgba(15,127,143,.20) !important;
         }
         .molecular-hero {
             padding: 1rem 1.15rem;
             border: 1px solid var(--pcr-border);
-            border-radius: 24px;
+            border-radius: var(--radius);
             background: var(--pcr-hero-bg);
-            box-shadow: 0 18px 60px var(--pcr-shadow);
+            box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+            backdrop-filter: blur(22px) saturate(1.25);
+            -webkit-backdrop-filter: blur(22px) saturate(1.25);
             margin-bottom: .8rem;
         }
-        .molecular-hero h3 { margin: 0 0 .35rem 0; letter-spacing: -.02em; color: var(--pcr-heading); }
+        .molecular-hero h3 { margin: 0 0 .35rem 0; letter-spacing: 0; color: var(--pcr-heading); }
         .molecular-hero p { margin: 0; color: var(--pcr-text); }
         .pcr-stepper {
             display: grid;
@@ -113,10 +113,13 @@ def inject_expert_css() -> None:
             margin: .4rem 0 1.1rem 0;
         }
         .pcr-step {
-            border-radius: 18px;
+            border-radius: var(--radius);
             padding: .82rem .9rem;
             border: 1px solid var(--pcr-soft-border);
             background: var(--pcr-step-bg);
+            box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+            backdrop-filter: blur(18px) saturate(1.2);
+            -webkit-backdrop-filter: blur(18px) saturate(1.2);
         }
         .pcr-step b { color: var(--pcr-heading); display: block; margin-bottom: .25rem; }
         .pcr-step span { color: var(--pcr-text); font-size: .86rem; }
@@ -130,16 +133,19 @@ def inject_expert_css() -> None:
             margin: .15rem .2rem .15rem 0;
             font-size: .86rem;
             background: var(--pcr-step-bg);
+            box-shadow: inset 0 1px 0 var(--glass-highlight);
         }
         .pill-high { background: rgba(227,52,85,.16); color: #8D0718; }
         .pill-moderate { background: rgba(255,200,87,.24); color: #765006; }
         .pill-low { background: rgba(44,234,163,.18); color: #07513E; }
         .glass-panel {
             border: 1px solid var(--pcr-soft-border);
-            border-radius: 24px;
+            border-radius: var(--radius);
             padding: 1rem 1.1rem;
             background: var(--pcr-panel-bg);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 14px 42px var(--pcr-shadow);
+            box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+            backdrop-filter: blur(22px) saturate(1.25);
+            -webkit-backdrop-filter: blur(22px) saturate(1.25);
             margin-bottom: .7rem;
         }
         .glass-panel h4 { margin-top: 0; margin-bottom: .35rem; color: var(--pcr-heading); }
@@ -149,19 +155,16 @@ def inject_expert_css() -> None:
 
         @media (prefers-color-scheme: dark) {
             :root {
-                --pcr-border: rgba(255,255,255,.14);
-                --pcr-soft-border: rgba(255,255,255,.13);
-                --pcr-panel-bg: linear-gradient(145deg, rgba(59,13,29,.78), rgba(21,4,12,.64));
-                --pcr-step-bg: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
-                --pcr-hero-bg:
-                  radial-gradient(circle at top left, rgba(255,200,87,.18), transparent 32%),
-                  radial-gradient(circle at top right, rgba(77,225,255,.16), transparent 30%),
-                  linear-gradient(145deg, rgba(41,6,19,.95), rgba(16,2,9,.82));
-                --pcr-heading: #FFFFFF;
-                --pcr-text: rgba(255,255,255,.76);
-                --pcr-muted: rgba(255,255,255,.62);
-                --pcr-shadow: rgba(0,0,0,.33);
-                --pcr-tab-bg: linear-gradient(135deg, rgba(179,18,55,.22), rgba(123,97,255,.12));
+                --pcr-border: var(--glass-border);
+                --pcr-soft-border: var(--glass-border);
+                --pcr-panel-bg: var(--glass-bg);
+                --pcr-step-bg: var(--glass-bg-soft);
+                --pcr-hero-bg: var(--glass-bg-strong);
+                --pcr-heading: var(--heading);
+                --pcr-text: var(--secondary-text);
+                --pcr-muted: var(--soft-text);
+                --pcr-shadow: var(--card-shadow);
+                --pcr-tab-bg: rgba(255,255,255,.07);
             }
             .pill-high { color: #FFD6DE; }
             .pill-moderate { color: #FFE7A8; }
@@ -175,9 +178,9 @@ def inject_expert_css() -> None:
 
 def _theme_layout(fig: go.Figure, title: str | None = None, height: int = 430) -> go.Figure:
     dark = current_theme_type() == "dark"
-    text = "rgba(255,255,255,0.88)" if dark else "#2F1720"
-    grid = "rgba(255,255,255,0.11)" if dark else "rgba(63,2,8,.11)"
-    plot_bg = "rgba(17,4,10,0.68)" if dark else "rgba(255,248,250,.72)"
+    text = "#F5FAFC" if dark else "#17212B"
+    grid = "rgba(255,255,255,0.12)" if dark else "rgba(36,48,63,.12)"
+    plot_bg = "rgba(255,255,255,.04)" if dark else "rgba(255,255,255,.22)"
     fig.update_layout(
         template="plotly_dark" if dark else "plotly_white",
         height=height,
@@ -195,8 +198,8 @@ def _theme_layout(fig: go.Figure, title: str | None = None, height: int = 430) -
             bgcolor="rgba(0,0,0,0)",
         ),
         hoverlabel=dict(
-            bgcolor="#1A0710" if dark else "#FFF8FA",
-            bordercolor="rgba(255,255,255,.18)" if dark else "rgba(63,2,8,.18)",
+            bgcolor="rgba(16,24,32,.92)" if dark else "rgba(255,255,255,.92)",
+            bordercolor="rgba(255,255,255,.18)" if dark else "rgba(36,48,63,.16)",
             font=dict(color=text, size=12),
         ),
     )

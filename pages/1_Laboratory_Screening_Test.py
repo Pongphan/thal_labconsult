@@ -82,71 +82,69 @@ if mode == "Single patient consult":
     row = patient_form()
     result = analyze_screening(row, thresholds)
     
-
     section("Consult summary")
-        
-        # 🌟 Swapped Layout: Expert Verdict on the LEFT, Key Findings on the RIGHT
+    
+    # 🌟 Swapped Layout: Expert Verdict on the LEFT, Key Findings on the RIGHT
     col_verdict, col_evidence = st.columns([0.9, 1.1])
-        
+    
     with col_verdict:
-            st.markdown("#### 📋 Expert Verdict")
-            level = "danger" if result.consult_risk == "Critical review" else "high" if result.consult_risk == "High" else "moderate" if result.consult_risk == "Moderate" else "low"
-            v1, v2 = st.columns(2)
-            with v1:
-                metric_card(
-                    "Risk Class", 
-                    result.consult_risk, 
-                    f"Pattern: {result.top_pattern}", 
-                    level
-                )
-            with v2:
-                # Reflex priority decision based on the internal triage rules
-                #  โค้ดแก้ไขใหม่ (เปลี่ยนไปอิงตามค่า consult_score แบบเดียวกับที่โค้ดดั้งเดิมใช้)
-                reflex_action = "Molecular testing" if result.consult_score >= 45 or row.get("hba2e_percent", 0) >= 4.0 else "Routine review"
-                metric_card(
-                    "Reflex Priority", 
-                    reflex_action, 
-                    "Recommended next step", 
-                    level
-                )
-                
+        st.markdown("#### 📋 Expert Verdict")
+        level = "danger" if result.consult_risk == "Critical review" else "high" if result.consult_risk == "High" else "moderate" if result.consult_risk == "Moderate" else "low"
+        v1, v2 = st.columns(2)
+        with v1:
+            metric_card(
+                "Risk Class", 
+                result.consult_risk, 
+                f"Pattern: {result.top_pattern}", 
+                level
+            )
+        with v2:
+            # Reflex priority decision based on the internal triage rules
+            #  โค้ดแก้ไขใหม่ (เปลี่ยนไปอิงตามค่า consult_score แบบเดียวกับที่โค้ดดั้งเดิมใช้)
+            reflex_action = "Molecular testing" if result.consult_score >= 45 or row["hba2e_percent"] >= 4.0 else "Routine review"
+            metric_card(
+                "Reflex Priority", 
+                reflex_action, 
+                "Recommended next step", 
+                level
+            )
+            
     with col_evidence:
-            st.markdown("#### 🔍 Key Laboratory Findings")
-            m1, m2 = st.columns(2)
-            with m1:
-                # Primary screening indicator
-                mcv_val = row.get("mcv_fl", 0)
-                mcv_status = "🔴 Microcytosis (<80 fL)" if mcv_val < 80 else "🟢 Normal (≥80 fL)"
-                metric_card(
-                    "Mean Corpuscular Volume", 
-                    f"{mcv_val} fL", 
-                    mcv_status, 
-                    "danger" if mcv_val < 80 else "info"
-                )
-            with m2:
-                # HbA2/E value relative to cutoff
-                hba2_val = row.get("hba2e_percent", 0)
-                hba2_thr = thresholds.get("hba2_beta_trait", 3.5)
-                hba2_status = f"🔺 Elevated (>{hba2_thr}%) • Suspect β-Trait" if hba2_val > hba2_thr else "🟢 Normal range"
-                metric_card(
-                    "Observed HbA2/E", 
-                    f"{hba2_val}%", 
-                    hba2_status, 
-                    "high" if hba2_val > hba2_thr else "low"
-                )
+        st.markdown("#### 🔍 Key Laboratory Findings")
+        m1, m2 = st.columns(2)
+        with m1:
+            # Primary screening indicator
+            mcv_val = row["mcv_fl"]
+            mcv_status = "🔴 Microcytosis (<80 fL)" if mcv_val < 80 else "🟢 Normal (≥80 fL)"
+            metric_card(
+                "Mean Corpuscular Volume", 
+                f"{mcv_val} fL", 
+                mcv_status, 
+                "danger" if mcv_val < 80 else "info"
+            )
+        with m2:
+            # HbA2/E value relative to cutoff
+            hba2_val = row["hba2e_percent"]
+            hba2_thr = thresholds.get("hba2_beta_trait", 3.5)
+            hba2_status = f"🔺 Elevated (>{hba2_thr}%) • Suspect β-Trait" if hba2_val > hba2_thr else "🟢 Normal range"
+            metric_card(
+                "Observed HbA2/E", 
+                f"{hba2_val}%", 
+                hba2_status, 
+                "high" if hba2_val > hba2_thr else "low"
+            )
 
     ml_pred = phenotype_similarity(pd.DataFrame([row])).iloc[0]
     f1, f2, f3 = st.columns(3)
     with f1:
-            metric_card("ML prototype pattern", str(ml_pred["ml_prototype_pattern"]), "Interpretable similarity layer", "info")
+        metric_card("ML prototype pattern", str(ml_pred["ml_prototype_pattern"]), "Interpretable similarity layer", "info")
     with f2:
-            metric_card("Prototype similarity", f"{ml_pred['ml_similarity_score']:.1f}%", "Not a calibrated probability", "moderate")
+        metric_card("Prototype similarity", f"{ml_pred['ml_similarity_score']:.1f}%", "Not a calibrated probability", "moderate")
     with f3:
-            metric_card("Runner-up pattern", str(ml_pred["ml_runner_up"]), f"{ml_pred['ml_runner_up_score']:.1f}% similarity", "low")
+        metric_card("Runner-up pattern", str(ml_pred["ml_runner_up"]), f"{ml_pred['ml_runner_up_score']:.1f}% similarity", "low")
     with st.expander("View ML-ready feature vector", expanded=False):
-            st.dataframe(ml_feature_matrix(pd.DataFrame([row])), use_container_width=True, hide_index=True)
-            clinical_box("This is a prototype similarity layer for UI validation and feature export. Replace it with a locally trained, molecular-confirmed, externally validated model before diagnostic deployment.", "warn")
-
+        st.dataframe(ml_feature_matrix(pd.DataFrame([row])), use_container_width=True, hide_index=True)
+        clinical_box("This is a prototype similarity layer for UI validation and feature export. Replace it with a locally trained, molecular-confirmed, externally validated model before diagnostic deployment.", "warn")
 
 
     st.markdown("---")
