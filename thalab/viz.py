@@ -83,6 +83,132 @@ def hplc_chromatogram(hba: float, hba2: float, hbf: float, hbe: float) -> go.Fig
     fig.update_xaxes(title="Retention time / analytical window", showgrid=False); fig.update_yaxes(title="Relative absorbance", showticklabels=False)
     return _layout(fig, "HPLC-like hemoglobin chromatogram simulator", 430)
 
+def thalassemia_spectrum_chart() -> go.Figure:
+    dark = current_theme_type() == "dark"
+    band_label = "rgba(245,250,252,.86)" if dark else "rgba(23,33,43,.78)"
+    critical_color = "#F5FAFC" if dark else "#24131A"
+    band_fill = {
+        "Minimal": "#0E8F68",
+        "Carrier": "#D99A1E",
+        "Moderate": "#E8890C",
+        "High": "#C91832",
+        "Critical": critical_color,
+    }
+    colors = {
+        "Normal (minimal/none)": "#0E8F68",
+        "Carrier / low risk": "#D99A1E",
+        "Moderate risk": "#E8890C",
+        "High risk": "#C91832",
+        "Critical risk": critical_color,
+    }
+    df = pd.DataFrame(
+        [
+            ("Normal genotype", "Balanced", "Normal (minimal/none)", 0.45, 0.9, 20, "Reference CBC and Hb fractions", "top center"),
+            ("Silent α carrier", "α-globin", "Carrier / low risk", 1.05, 1.35, 24, "Often subtle or borderline microcytosis", "bottom center"),
+            ("α-thal carrier", "α-globin", "Carrier / low risk", 1.35, 2.05, 27, "Microcytosis with normal or low-normal HbA2", "top left"),
+            ("β-thal trait", "β-globin", "Carrier / low risk", 1.58, 3.35, 30, "Low MCV/MCH with elevated HbA2", "top center"),
+            ("HbE trait", "β-globin variant", "Carrier / low risk", 1.45, 2.72, 28, "HbE/A2 fraction with positive DCIP pattern", "bottom right"),
+            ("Trait phenotype", "α or β-globin", "Moderate risk", 2.12, 2.35, 30, "Carrier pattern that needs partner-context interpretation", "bottom center"),
+            ("Homozygous HbE", "β-globin variant", "Moderate risk", 2.48, 3.08, 34, "High HbE fraction; usually moderate clinical burden", "top right"),
+            ("HbH disease", "α-globin", "High risk", 3.28, 3.78, 38, "HbH inclusion and chronic hemolytic phenotype", "bottom left"),
+            ("β-thal intermedia", "β-globin", "High risk", 3.82, 3.22, 38, "Raised HbF and anemia with variable transfusion need", "bottom right"),
+            ("HbH-Constant Spring", "α-globin", "High risk", 3.76, 4.36, 42, "Nondeletional α variant with more severe HbH phenotype", "top center"),
+            ("Homozygous β-thal", "β-globin", "Critical risk", 4.55, 3.78, 44, "Severe β-globin production failure", "bottom center"),
+            ("HbE/β0-thal", "β-globin variant", "Critical risk", 4.72, 4.43, 46, "Compound HbE and β0-thalassemia genotype", "top left"),
+            ("Hb Bart's hydrops", "α-globin", "Critical risk", 4.95, 4.95, 48, "Absent α-globin production; fetal hydrops risk", "top center"),
+        ],
+        columns=["label", "system", "risk", "severity", "signal", "bubble", "cue", "textposition"],
+    )
+
+    fig = go.Figure()
+    bands = [
+        (0.0, 1.0, "Minimal", "Minimal / none"),
+        (1.0, 2.0, "Carrier", "Carrier"),
+        (2.0, 3.0, "Moderate", "Moderate"),
+        (3.0, 4.2, "High", "High"),
+        (4.2, 5.25, "Critical", "Critical"),
+    ]
+    for x0, x1, key, label in bands:
+        fig.add_vrect(x0=x0, x1=x1, fillcolor=band_fill[key], opacity=0.12, line_width=0, layer="below")
+        fig.add_annotation(
+            x=(x0 + x1) / 2,
+            y=5.22,
+            text=label,
+            showarrow=False,
+            font=dict(size=12, color=band_label),
+            yanchor="top",
+        )
+
+    alpha = df[df["system"].str.contains("α", regex=False)]
+    beta = df[df["system"].str.contains("β", regex=False)]
+    fig.add_trace(
+        go.Scatter(
+            x=alpha["severity"],
+            y=alpha["signal"],
+            mode="lines",
+            line=dict(width=5, color="rgba(14,143,104,.38)", shape="spline"),
+            name="α-globin pathway",
+            hoverinfo="skip",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=beta["severity"],
+            y=beta["signal"],
+            mode="lines",
+            line=dict(width=5, color="rgba(109,64,216,.36)", shape="spline"),
+            name="β/HbE pathway",
+            hoverinfo="skip",
+        )
+    )
+
+    for risk, group in df.groupby("risk", sort=False):
+        fig.add_trace(
+            go.Scatter(
+                x=group["severity"],
+                y=group["signal"],
+                mode="markers+text",
+                text=group["label"],
+                textposition=group["textposition"].tolist(),
+                customdata=group[["system", "cue", "risk"]].to_numpy(),
+                marker=dict(
+                    size=group["bubble"].tolist(),
+                    color=colors[risk],
+                    opacity=0.9,
+                    line=dict(width=2.5, color="rgba(255,255,255,.92)"),
+                ),
+                name=risk,
+                hovertemplate="<b>%{text}</b><br>System: %{customdata[0]}<br>Primary cue: %{customdata[1]}<br>Band: %{customdata[2]}<extra></extra>",
+            )
+        )
+
+    fig.add_annotation(
+        x=3.7,
+        y=1.05,
+        text="Confirmatory testing turns a screening signal into a reproductive-risk answer.",
+        showarrow=False,
+        align="left",
+        font=dict(size=13, color=band_label),
+        bgcolor="rgba(255,255,255,.08)" if dark else "rgba(255,255,255,.52)",
+        bordercolor="rgba(255,255,255,.20)" if dark else "rgba(23,33,43,.10)",
+        borderpad=8,
+    )
+    fig.update_xaxes(
+        title="Qualitative clinical severity and reproductive urgency",
+        range=[0, 5.25],
+        tickvals=[0.5, 1.5, 2.5, 3.55, 4.7],
+        ticktext=["Minimal", "Carrier", "Moderate", "High", "Critical"],
+        showgrid=False,
+    )
+    fig.update_yaxes(
+        title="Typical laboratory signal strength",
+        range=[0.55, 5.35],
+        tickvals=[1, 2, 3, 4, 5],
+        ticktext=["Subtle", "Microcytosis", "Hb fraction cue", "Hemolysis / inclusion", "Fetal risk"],
+    )
+    fig.update_layout(hovermode="closest", legend=dict(orientation="h", yanchor="bottom", y=1.04, xanchor="right", x=1))
+    return _layout(fig, "Thalassemia phenotype spectrum map", 560)
+
 def mcv_hba2_quadrant(mcv: float, hba2: float, background: pd.DataFrame | None = None) -> go.Figure:
     if background is None:
         rng=np.random.default_rng(42); background=pd.DataFrame({"mcv_fl":np.concatenate([rng.normal(88,5,80),rng.normal(68,5,65),rng.normal(72,6,55)]),"hba2_percent":np.concatenate([rng.normal(2.6,.25,80),rng.normal(4.8,.55,65),rng.normal(2.5,.35,55)]),"pattern":["reference-like"]*80+["β-thal trait-like"]*65+["α/iron-like microcytosis"]*55})
