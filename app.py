@@ -13,7 +13,7 @@ from thalab.styles import (
     section,
     top_navigation
 )
-from thalab.viz import batch_mcv_hba2_scatter, population_sankey
+from thalab.viz import batch_mcv_hba2_scatter, population_sankey, thalassemia_spectrum_chart
 
 st.set_page_config(
     page_title="ThalLink",
@@ -54,6 +54,19 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
+section("Thalassemia topic", "A compact knowledge view of the disorders this dashboard is designed to screen, interpret, and escalate.")
+st.markdown(
+    """
+<div class="glass-card">
+  <div class="flow-step"><span class="flow-index">α</span><div><b>Alpha-thalassemia:</b> reduced α-globin production ranges from silent carrier states to HbH disease and Hb Bart's hydrops fetalis.</div></div>
+  <div class="flow-step"><span class="flow-index">β</span><div><b>Beta-thalassemia and HbE:</b> HBB variants can produce elevated HbA2, HbE fractions, increased HbF, microcytosis, anemia, and compound reproductive risk.</div></div>
+  <div class="flow-step"><span class="flow-index">!</span><div><b>Why it matters:</b> screening signals guide reflex Hb analysis, iron review, molecular confirmation, partner testing, and prenatal counseling when severe genotype combinations are possible.</div></div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+st.plotly_chart(thalassemia_spectrum_chart(), use_container_width=True)
 
 section("Embedded demo population", "Use the built-in data to verify dashboard behavior before uploading local laboratory data.")
 
