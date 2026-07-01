@@ -32,6 +32,13 @@ hero(
 
 disclaimer()
 
+if mode == "Single patient consult":
+    # 1. DEFINE the row first
+    row = patient_form()
+    result = analyze_screening(row, thresholds)
+    
+    # 2. USE the row afterwards
+    section("Consult summary")
 c1, c2, c3, c4 = st.columns(4)
 with c1:
         # 1. กล่องบอกค่า Hb/Hct และประเมินภาวะซีด (ดึงผลวิเคราะห์จาก core.py แบบสำเร็จรูป)
