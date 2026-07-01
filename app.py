@@ -42,35 +42,6 @@ with c3:
 with c4:
     metric_card("Batch ready", "CSV", "Population dashboard + downloads", "low")
 
-section("Open a workspace", "Choose a module using the cards below. Each page also contains the same card navigation shell.")
-col_a, col_b = st.columns(2)
-with col_a:
-    module_launch_card(
-        "Laboratory Screening Test",
-        "Single-patient and batch CSV consult dashboard for front-line thalassemia screening and reflex-test decision support.",
-        [
-            "CBC indices, Mentzer index, ferritin, OF/DCIP, HbH inclusion",
-            "HbA/HbA2/HbF/HbE fraction interpretation",
-            "Phenotype scores, HPLC-like plot, radar, and reflex Sankey",
-        ],
-        "pages/1_Laboratory_Screening_Test.py",
-        "🧪",
-        "Launch laboratory screening",
-    )
-with col_b:
-    module_launch_card(
-        "PCR Allele Matching",
-        "Molecular hematology workspace for α/β-globin allele panel intelligence and couple-risk counseling.",
-        [
-            "Gap-PCR / ARMS-PCR / sequencing-ready target knowledge base",
-            "Panel coverage, molecular methods, and amplicon-size review",
-            "Punnett risk board for α- and β-globin genotype combinations",
-        ],
-        "pages/2_PCR_Allele_Matching.py",
-        "🧬",
-        "Launch PCR allele matching",
-    )
-
 section("Clinical laboratory workflow", "The app follows a practical sequence: screen, interpret, reflex, genotype, and counsel.")
 st.markdown(
     """
@@ -85,15 +56,19 @@ st.markdown(
 )
 
 section("Embedded demo population", "Use the built-in data to verify dashboard behavior before uploading local laboratory data.")
+
+st.markdown(
+    """
+🟢 Normal (Minimal/None) - Normal genotype / No evidence of thalassemia  
+🟡 Carrier (Low Risk) - Silent carrier, α-thalassemia carrier, β-thalassemia trait, HbE trait  
+🟠 Moderate Risk - Thalassemia trait or Homozygous HbE  
+🔴 High Risk - HbH disease, HbH-Constant Spring disease, β-thalassemia intermedia  
+⚫ Critical Risk - Hb Bart's hydrops fetalis, HbE/β⁰-thalassemia , Homozygous β-thalassemia
+"""
+)
+
 demo = analyze_dataframe(example_screening_dataframe())
 
-"""
-left, right = st.columns([1.1, 0.9])
-with left:
-    st.plotly_chart(population_sankey(demo), use_container_width=True)
-with right:
-    st.plotly_chart(batch_mcv_hba2_scatter(demo), use_container_width=True)
-"""
 st.plotly_chart(population_sankey(demo), use_container_width=True)
 
 section("Platform Roadmap")
