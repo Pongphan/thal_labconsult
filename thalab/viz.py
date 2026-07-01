@@ -66,22 +66,55 @@ def score_radar(scores: dict[str, float]) -> go.Figure:
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0,100], gridcolor="rgba(177,18,38,.15)")), showlegend=False)
     return _layout(fig, "Phenotype score radar", 430)
 
-def hb_fraction_donut(hba: float, hba2: float, hbf: float, hbe: float) -> go.Figure:
-    values=[max(0,float(x or 0)) for x in [hba,hba2,hbf,hbe]]; labels=["HbA","HbA2","HbF","HbE/variant"]
-    other=max(0,100-sum(values))
-    if other>.3: values.append(other); labels.append("Other/unassigned")
-    fig=go.Figure(go.Pie(labels=labels, values=values, hole=.62, sort=False, textinfo="label+percent")); fig.update_traces(marker=dict(line=dict(color="white", width=2)))
+def hb_fraction_donut(hba: float, hba2: float, hbf: float, hbe: float, bart: float = 0, hbh: float = 0, hbcs: float = 0) -> go.Figure:
+    raw_vals = [hba, hba2, hbf, hbe, bart, hbh, hbcs]
+    raw_labels = ["HbA", "HbA2", "HbF", "HbE", "Bart", "HbH", "HbCS"]
+    
+    values = []
+    labels = []
+    for v, l in zip(raw_vals, raw_labels):
+        if v is not None and float(v) > 0:
+            values.append(float(v))
+            labels.append(l)
+            
+    other = max(0, 100 - sum(values))
+    if other > 0.3: 
+        values.append(other)
+        labels.append("Other/unassigned")
+        
+    fig=go.Figure(go.Pie(labels=labels, values=values, hole=.62, sort=False, textinfo="label+percent"))
+    fig.update_traces(marker=dict(line=dict(color="white", width=2)))
     return _layout(fig, "Hemoglobin fraction composition", 390)
 
-def hplc_chromatogram(hba: float, hba2: float, hbf: float, hbe: float) -> go.Figure:
-    x=np.linspace(.5,6.5,900); peaks=[("HbF",1.15,.09,max(.3,hbf or 0),BLUE),("HbA",2.72,.13,max(.3,hba or 0),BLOOD),("HbA2",3.72,.085,max(.3,hba2 or 0),GOLD),("HbE/variant",4.05,.095,max(.2,hbe or 0),VIOLET)]
+def hplc_chromatogram(hba: float, hba2: float, hbf: float, hbe: float, bart: float = 0, hbh: float = 0, hbcs: float = 0, method: str = "HPLC") -> go.Figure:
+    x = np.linspace(0, 7.5, 900)
+    # จำลองตำแหน่ง Peak ใหม่โดยรวม Bart, HbH, HbCS เข้าไปด้วย
+    peaks = [
+        ("Bart", 0.6, 0.08, max(0.1, bart or 0), "#F15BB5"),
+        ("HbH", 0.9, 0.08, max(0.1, hbh or 0), "#9B5DE5"),
+        ("HbF", 1.15, 0.09, max(0.3, hbf or 0), BLUE),
+        ("HbA", 2.72, 0.13, max(0.3, hba or 0), BLOOD),
+        ("HbA2", 3.72, 0.085, max(0.3, hba2 or 0), GOLD),
+        ("HbE", 4.05, 0.095, max(0.2, hbe or 0), VIOLET),
+        ("HbCS", 5.8, 0.12, max(0.1, hbcs or 0), TEAL)
+    ]
+    
     fig=go.Figure(); total=np.zeros_like(x)
-    for name,mu,sig,area,color in peaks:
-        y=area*np.exp(-.5*((x-mu)/sig)**2); total+=y
-        fig.add_trace(go.Scatter(x=x,y=y,mode="lines",fill="tozeroy",name=name,line=dict(width=2.5,color=color),opacity=.78))
-    fig.add_trace(go.Scatter(x=x,y=total,mode="lines",name="Composite signal",line=dict(width=3.5,color=INK)))
-    fig.update_xaxes(title="Retention time / analytical window", showgrid=False); fig.update_yaxes(title="Relative absorbance", showticklabels=False)
-    return _layout(fig, "HPLC-like hemoglobin chromatogram simulator", 430)
+    for name, mu, sig, area, color in peaks:
+        # เพื่อคงความสวยงาม จะวาดติ่งเล็กๆ เสมอเฉพาะตัวหลักแบบโค้ดเดิม ส่วนตัวใหม่ถ้ายอด 0 จะไม่วาด
+        is_main_hb = name in ["HbF", "HbA", "HbA2", "HbE"]
+        if is_main_hb or area > 0.1:
+            y = area * np.exp(-.5 * ((x - mu) / sig) ** 2); total += y
+            fig.add_trace(go.Scatter(x=x, y=y, mode="lines", fill="tozeroy", name=name, line=dict(width=2.5, color=color), opacity=.78))
+            
+    fig.add_trace(go.Scatter(x=x, y=total, mode="lines", name="Composite signal", line=dict(width=3.5, color=INK)))
+    fig.update_xaxes(title="Retention time / analytical window", showgrid=False)
+    fig.update_yaxes(title="Relative absorbance", showticklabels=False)
+    
+    # เปลี่ยนชื่อกราฟตาม Method
+    title = f"Hemoglobin Fraction Simulator ({method})"
+    return _layout(fig, title, 430)
+
 
 def thalassemia_spectrum_chart() -> go.Figure:
     dark = current_theme_type() == "dark"
