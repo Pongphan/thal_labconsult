@@ -385,7 +385,7 @@ if mode == "Single patient consult":
                 "info"
             )
 
-    section("Stunning screening visual analytics")
+    section("Screening visual analytics")
     t1,t2,t3=st.tabs(["Visual consult board","Analytical pattern","Reflex pathway"]); scores={"β-thal trait":result.beta_trait_score,"α-thal/HbH":result.alpha_trait_score,"HbE/variant":result.hbe_score,"Iron deficiency":result.iron_deficiency_score}
     with t1:
         st.plotly_chart(score_radar(scores), use_container_width=True)
