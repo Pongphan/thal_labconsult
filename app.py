@@ -32,8 +32,18 @@ hero(
 
 disclaimer()
 
-c1, c2, c3, c4 = st.columns(4)
-with c1:
+# 1. First, check the mode
+if mode == "Single patient consult":
+    
+    # 2. CREATE the row variable by calling the form
+    row = patient_form()
+    result = analyze_screening(row, thresholds)
+    
+    section("Consult summary")
+    st.markdown("#### 🩸 Complete Blood Count (CBC) & Iron Status")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
         # 1. กล่องบอกค่า Hb/Hct และประเมินภาวะซีด (ดึงผลวิเคราะห์จาก core.py แบบสำเร็จรูป)
         hb = row["hb_g_dl"]
         hct = row["hct_percent"]
@@ -45,12 +55,12 @@ with c1:
             "ซีด (Anemia)" if is_anemia else "ปกติ (Normal)", 
             "danger" if is_anemia else "info"
         )
-with c2:
-    metric_card("Modules", "2", "Screening consult + PCR allele matching", "high")
-with c3:
-    metric_card("Visual layers", "10+", "Gauge, radar, Sankey, HPLC, panel and risk charts", "moderate")
-with c4:
-    metric_card("Batch ready", "CSV", "Population dashboard + downloads", "low")
+    with c2:
+        metric_card("Modules", "2", "Screening consult + PCR allele matching", "high")
+    with c3:
+        metric_card("Visual layers", "10+", "Gauge, radar, Sankey, HPLC, panel and risk charts", "moderate")
+    with c4:
+        metric_card("Batch ready", "CSV", "Population dashboard + downloads", "low")
 
 section("Clinical laboratory workflow", "The app follows a practical sequence: screen, interpret, reflex, genotype, and counsel.")
 st.markdown(
