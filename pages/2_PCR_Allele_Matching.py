@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 from typing import Sequence
 
 import numpy as np
@@ -151,6 +152,41 @@ def inject_expert_css() -> None:
         .glass-panel h4 { margin-top: 0; margin-bottom: .35rem; color: var(--pcr-heading); }
         .glass-panel p { margin-bottom: 0; color: var(--pcr-text); }
         .mini-caption { color: var(--pcr-muted); font-size: .84rem; margin-top: -.2rem; }
+        .coverage-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(130px, 1fr));
+            gap: .65rem;
+            margin: .15rem 0 .85rem;
+        }
+        .coverage-summary__item {
+            border: 1px solid var(--pcr-soft-border);
+            border-radius: var(--radius);
+            padding: .82rem .9rem;
+            background: var(--pcr-step-bg);
+            box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+            backdrop-filter: blur(18px) saturate(1.18);
+            -webkit-backdrop-filter: blur(18px) saturate(1.18);
+        }
+        .coverage-summary__label {
+            color: var(--pcr-muted);
+            font-size: .76rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            text-transform: uppercase;
+        }
+        .coverage-summary__value {
+            color: var(--pcr-heading);
+            font-size: 1.35rem;
+            font-weight: 850;
+            line-height: 1.15;
+            margin-top: .18rem;
+        }
+        .coverage-summary__caption {
+            color: var(--pcr-text);
+            font-size: .82rem;
+            margin-top: .25rem;
+            overflow-wrap: anywhere;
+        }
         .dataframe th { font-size: 12px !important; }
 
         @media (prefers-color-scheme: dark) {
@@ -169,6 +205,16 @@ def inject_expert_css() -> None:
             .pill-high { color: #FFD6DE; }
             .pill-moderate { color: #FFE7A8; }
             .pill-low { color: #C9FFE9; }
+        }
+        @media (max-width: 900px) {
+            .coverage-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 560px) {
+            .coverage-summary {
+                grid-template-columns: 1fr;
+            }
         }
         </style>
         """,
@@ -214,6 +260,7 @@ def _chart_neutrals() -> dict[str, str]:
             "root": "rgba(255,255,255,.06)",
             "border": "rgba(255,255,255,.18)",
             "strong_border": "rgba(255,255,255,.92)",
+            "treemap_grid": "rgba(255,255,255,.46)",
             "soft_fill": "rgba(255,255,255,.035)",
             "muted_fill": "rgba(255,255,255,.18)",
             "muted_text": "rgba(255,255,255,.58)",
@@ -226,6 +273,7 @@ def _chart_neutrals() -> dict[str, str]:
         "root": "rgba(63,2,8,.05)",
         "border": "rgba(63,2,8,.18)",
         "strong_border": "rgba(63,2,8,.78)",
+        "treemap_grid": "rgba(36,48,63,.30)",
         "soft_fill": "rgba(177,18,38,.035)",
         "muted_fill": "rgba(63,2,8,.16)",
         "muted_text": "rgba(63,2,8,.62)",
@@ -264,6 +312,64 @@ def molecular_panel(title: str, body: str) -> None:
     st.markdown(f'<div class="glass-panel"><h4>{title}</h4><p>{body}</p></div>', unsafe_allow_html=True)
 
 
+def _escape(value: object) -> str:
+    return html.escape(str(value), quote=True)
+
+
+def coverage_map_summary(db: pd.DataFrame) -> None:
+    if db.empty:
+        st.markdown(
+            """
+            <div class="coverage-summary">
+                <div class="coverage-summary__item">
+                    <div class="coverage-summary__label">Active targets</div>
+                    <div class="coverage-summary__value">0</div>
+                    <div class="coverage-summary__caption">No targets match the current filters</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
+    system_counts = db["system"].fillna("unknown").astype(str).value_counts()
+    method_counts = db["method"].fillna("unknown").astype(str).value_counts()
+    class_counts = db["variant_class"].fillna("unknown").astype(str).value_counts()
+    top_method = method_counts.index[0] if not method_counts.empty else "unknown"
+    top_method_count = int(method_counts.iloc[0]) if not method_counts.empty else 0
+    top_class = class_counts.index[0] if not class_counts.empty else "unknown"
+    top_class_count = int(class_counts.iloc[0]) if not class_counts.empty else 0
+    system_caption = " / ".join(f"{_escape(system)} {int(count)}" for system, count in system_counts.items())
+
+    st.markdown(
+        f"""
+        <div class="coverage-summary">
+            <div class="coverage-summary__item">
+                <div class="coverage-summary__label">Active targets</div>
+                <div class="coverage-summary__value">{len(db)}</div>
+                <div class="coverage-summary__caption">{_escape(db["target_code"].nunique())} unique target codes</div>
+            </div>
+            <div class="coverage-summary__item">
+                <div class="coverage-summary__label">Globin balance</div>
+                <div class="coverage-summary__value">{len(system_counts)}</div>
+                <div class="coverage-summary__caption">{system_caption}</div>
+            </div>
+            <div class="coverage-summary__item">
+                <div class="coverage-summary__label">Largest method</div>
+                <div class="coverage-summary__value">{_escape(top_method_count)}</div>
+                <div class="coverage-summary__caption">{_escape(top_method)}</div>
+            </div>
+            <div class="coverage-summary__item">
+                <div class="coverage-summary__label">Largest class</div>
+                <div class="coverage-summary__value">{_escape(top_class_count)}</div>
+                <div class="coverage-summary__caption">{_escape(top_class)}</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 # -----------------------------------------------------------------------------
 # Data preparation helpers
 # -----------------------------------------------------------------------------
@@ -284,21 +390,80 @@ def cached_allele_database() -> pd.DataFrame:
 
 def panel_coverage_treemap(db: pd.DataFrame) -> go.Figure:
     neutral = _chart_neutrals()
-    label_col = _safe_col(db, ["common_name", "target_code", "variant_class"], "variant_class")
+    work = db.copy()
+    if work.empty:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No molecular targets match the current filters.",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            font=dict(size=16, color=neutral["muted_text"]),
+        )
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        return _theme_layout(fig, "Molecular panel coverage map", 340)
+
+    label_col = _safe_col(work, ["common_name", "target_code", "variant_class"], "variant_class")
+    code_col = _safe_col(work, ["target_code", "common_name"], label_col)
+    work["_target_label"] = (
+        work[label_col].fillna("Unknown target").astype(str)
+        + " ["
+        + work[code_col].fillna("NA").astype(str)
+        + "]"
+    )
+    work["_target_count"] = 1
+    hover_data: dict[str, bool | str] = {
+        "_target_count": False,
+        "system": True,
+        "variant_class": True,
+        "method": True,
+        "target_code": True,
+    }
+    if "expected_bp" in work.columns:
+        hover_data["expected_bp"] = ":.0f"
+
     fig = px.treemap(
-        db,
-        path=["system", "variant_class", "method", label_col],
-        values=None,
+        work,
+        path=["system", "variant_class", "method", "_target_label"],
+        values="_target_count",
         color="system",
-        color_discrete_map={"alpha": HEM_COLORS["cyan"], "beta": HEM_COLORS["blood2"]},
-        hover_data=[c for c in ["target_code", "expected_bp", "clinical_relevance"] if c in db.columns],
+        color_discrete_map={
+            "alpha": HEM_COLORS["cyan"],
+            "beta": HEM_COLORS["blood2"],
+            "(?)": neutral["muted_fill"],
+        },
+        hover_data=hover_data,
     )
     fig.update_traces(
-        marker=dict(cornerradius=7),
-        textinfo="label+value",
+        branchvalues="total",
+        marker=dict(
+            cornerradius=5,
+            line=dict(color=neutral["treemap_grid"], width=2.2),
+        ),
+        pathbar=dict(
+            textfont=dict(color=neutral["text"], size=12),
+            thickness=28,
+        ),
+        selector=dict(type="treemap"),
+        textinfo="label+value+percent parent",
+        texttemplate="<b>%{label}</b><br>%{value} targets<br>%{percentParent:.0%} of parent",
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "Targets: %{value}<br>"
+            "Share of panel: %{percentRoot:.1%}<br>"
+            "Share of parent: %{percentParent:.1%}"
+            "<extra></extra>"
+        ),
         root_color=neutral["root"],
+        tiling=dict(packing="squarify", pad=4),
+        maxdepth=4,
     )
-    return _theme_layout(fig, "Molecular panel coverage map", 520)
+    fig.update_layout(
+        uniformtext=dict(minsize=11, mode="hide"),
+        colorway=[HEM_COLORS["cyan"], HEM_COLORS["blood2"], HEM_COLORS["plasma"], HEM_COLORS["green"]],
+    )
+    return _theme_layout(fig, "Molecular panel coverage map", 560)
 
 
 def allele_lollipop(db: pd.DataFrame) -> go.Figure:
@@ -587,7 +752,8 @@ with tabs[0]:
     if sort_mode in view.columns:
         view = view.sort_values([sort_mode])
 
-    st.plotly_chart(panel_coverage_treemap(view if len(view) else db), use_container_width=True, theme=None)
+    coverage_map_summary(view)
+    st.plotly_chart(panel_coverage_treemap(view), use_container_width=True, theme=None)
 
     c3, c4 = st.columns([1, 1])
     with c3:
@@ -597,7 +763,7 @@ with tabs[0]:
         try:
             st.plotly_chart(allele_method_bar(view if len(view) else db), use_container_width=True, theme=None)
         except Exception:
-            st.plotly_chart(panel_coverage_treemap(view if len(view) else db), use_container_width=True, theme=None)
+            st.plotly_chart(panel_coverage_treemap(view), use_container_width=True, theme=None)
 
     molecular_panel(
         "Usability note",
