@@ -34,7 +34,17 @@ disclaimer()
 
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    metric_card("Navigation", "Cards", "No sidebar dependency", "info")
+        # 1. กล่องบอกค่า Hb/Hct และประเมินภาวะซีด (ดึงผลวิเคราะห์จาก core.py แบบสำเร็จรูป)
+        hb = row["hb_g_dl"]
+        hct = row["hct_percent"]
+        is_anemia = result.anemia  # <--- ตัวนี้จะเช็คตามตารางทั้งค่า Hb และ Hct ตามอายุ/เพศ 
+        
+        metric_card(
+            "Hb / Hct", 
+            f"{hb} g/dL / {hct}%", 
+            "ซีด (Anemia)" if is_anemia else "ปกติ (Normal)", 
+            "danger" if is_anemia else "info"
+        )
 with c2:
     metric_card("Modules", "2", "Screening consult + PCR allele matching", "high")
 with c3:
