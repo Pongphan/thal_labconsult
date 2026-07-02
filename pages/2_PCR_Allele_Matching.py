@@ -651,21 +651,21 @@ def render_couple_risk_results(
     st.markdown('<div style="height: 0.85rem;"></div>', unsafe_allow_html=True)
     with st.expander(f"{system_label}-globin offspring genotype evidence table", expanded=True):
         risk_table = genotype_evidence_table(result)
-        st.dataframe(risk_table, use_container_width=True, hide_index=True)
+        st.dataframe(risk_table, width='stretch', hide_index=True)
         st.download_button(
             f"Download {system}-globin couple-risk table",
             result.to_csv(index=False).encode("utf-8"),
             f"{system}_globin_couple_risk_expert.csv",
             "text/csv",
-            use_container_width=True,
+            width='stretch',
             key=f"{system}_risk_download",
         )
 
     donut_col, sunburst_col = st.columns([1, 1])
     with donut_col:
-        st.plotly_chart(risk_probability_donut(result), use_container_width=True, theme=None)
+        st.plotly_chart(risk_probability_donut(result), width='stretch', theme=None)
     with sunburst_col:
-        st.plotly_chart(genotype_outcome_sunburst(result), use_container_width=True, theme=None)
+        st.plotly_chart(genotype_outcome_sunburst(result), width='stretch', theme=None)
 
     if high_risk > 0:
         clinical_box(
@@ -764,29 +764,29 @@ with tabs[0]:
         view = view.sort_values([sort_mode])
 
     coverage_map_summary(view)
-    st.plotly_chart(panel_coverage_treemap(view), use_container_width=True, theme=None)
+    st.plotly_chart(panel_coverage_treemap(view), width='stretch', theme=None)
 
     c3, c4 = st.columns([1, 1])
     with c3:
-        st.plotly_chart(allele_lollipop(view if len(view) else db), use_container_width=True, theme=None)
+        st.plotly_chart(allele_lollipop(view if len(view) else db), width='stretch', theme=None)
     with c4:
         # Keep original project visual for compatibility, but place it as a secondary view.
         try:
-            st.plotly_chart(allele_method_bar(view if len(view) else db), use_container_width=True, theme=None)
+            st.plotly_chart(allele_method_bar(view if len(view) else db), width='stretch', theme=None)
         except Exception:
-            st.plotly_chart(panel_coverage_treemap(view), use_container_width=True, theme=None)
+            st.plotly_chart(panel_coverage_treemap(view), width='stretch', theme=None)
 
     molecular_panel(
         "Usability note",
         "Before adopting this page in a production laboratory, replace the demonstration allele panel with your locally validated SOP panel, positive controls, primer lot information, and reporting nomenclature.",
     )
-    st.dataframe(view, use_container_width=True, hide_index=True)
+    st.dataframe(view, width='stretch', hide_index=True)
     st.download_button(
         "⬇️ Download filtered allele knowledge base CSV",
         view.to_csv(index=False).encode("utf-8"),
         "thalassemia_filtered_allele_knowledge_base.csv",
         "text/csv",
-        use_container_width=True,
+        width='stretch',
     )
 
 
@@ -831,7 +831,7 @@ with tabs[2]:
             {"Module": "Consult note", "Export": "HTML/PDF extension recommended", "Purpose": "Molecular interpretation and genetic-counseling prompt"},
         ]
     )
-    st.dataframe(report_items, use_container_width=True, hide_index=True)
+    st.dataframe(report_items, width='stretch', hide_index=True)
 
     st.markdown(
         """

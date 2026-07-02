@@ -691,14 +691,14 @@ def page_card_navigation(active: str | None = None) -> None:
                 )
             else:
                 label = f"**{page.title}**  \n{page.caption}  \n\n`{page.badge}`"
-                st.page_link(page.path, label=label, icon=page.icon, use_container_width=True)
+                st.page_link(page.path, label=label, icon=page.icon, width='stretch')
 
 
 def module_launch_card(title: str, body: str, bullets: list[str], page_path: str, icon: str, cta: str) -> None:
     """Render a full-card navigation link for module launch areas."""
     bullet_text = "  \n".join(f"• {item}" for item in bullets)
     label = f"**{title}**  \n{body}  \n\n{bullet_text}  \n\n**{cta} →**"
-    st.page_link(page_path, label=label, icon=icon, use_container_width=True)
+    st.page_link(page_path, label=label, icon=icon, width='stretch')
 
 
 def hero(title: str, subtitle: str, eyebrow: str = "Expert hematology decision support", show_navigation: bool = True) -> None:

@@ -388,16 +388,16 @@ if mode == "Single patient consult":
     section("Screening visual analytics")
     t1,t2,t3=st.tabs(["Visual consult board","Analytical pattern","Reflex pathway"]); scores={"β-thal trait":result.beta_trait_score,"α-thal/HbH":result.alpha_trait_score,"HbE/variant":result.hbe_score,"Iron deficiency":result.iron_deficiency_score}
     with t1:
-        st.plotly_chart(score_radar(scores), use_container_width=True)
+        st.plotly_chart(score_radar(scores), width='stretch')
         # อัปเดตให้ส่งค่า Bart, HbH, HbCS เข้าไปด้วย
-        st.plotly_chart(hb_fraction_donut(row["hba_percent"], row["hba2e_percent"], row["hbf_percent"], row["hbe_percent"], row.get("bart_percent", 0), row.get("hbh_percent", 0), row.get("hbcs_percent", 0)), use_container_width=True)
-        st.plotly_chart(cbc_reference_bars(row), use_container_width=True)
+        st.plotly_chart(hb_fraction_donut(row["hba_percent"], row["hba2e_percent"], row["hbf_percent"], row["hbe_percent"], row.get("bart_percent", 0), row.get("hbh_percent", 0), row.get("hbcs_percent", 0)), width='stretch')
+        st.plotly_chart(cbc_reference_bars(row), width='stretch')
     
     with t2:
         # อัปเดตให้ส่งค่า Bart, HbH, HbCS และ Method เข้าไปด้วย
-        st.plotly_chart(hplc_chromatogram(row["hba_percent"], row["hba2e_percent"], row["hbf_percent"], row["hbe_percent"], row.get("bart_percent", 0), row.get("hbh_percent", 0), row.get("hbcs_percent", 0), row.get("hb_method", "HPLC")), use_container_width=True)
+        st.plotly_chart(hplc_chromatogram(row["hba_percent"], row["hba2e_percent"], row["hbf_percent"], row["hbe_percent"], row.get("bart_percent", 0), row.get("hbh_percent", 0), row.get("hbcs_percent", 0), row.get("hb_method", "HPLC")), width='stretch')
         
-    with t3: st.plotly_chart(reflex_sankey(result), use_container_width=True)
+    with t3: st.plotly_chart(reflex_sankey(result), width='stretch')
 
     section("Evidence and recommendations")
     ev_col, rec_col = st.columns(2)
@@ -433,14 +433,14 @@ else:
     with k2: metric_card("High/Critical", str(int(results["consult_risk"].isin(["High","Critical review"]).sum())), "Reflex-priority samples", "high")
     with k3: metric_card("ML-ready features", str(len(ml_feature_matrix(df).columns)-1), "Exportable numeric inputs", "moderate")
     with k4: metric_card("Dominant pattern", str(results["top_pattern"].mode().iloc[0]), "Most frequent top pattern", "low")
-    st.dataframe(results, use_container_width=True, hide_index=True); st.download_button("Download interpreted batch CSV", results.to_csv(index=False).encode("utf-8"), "thalassemia_screening_interpreted.csv", "text/csv")
+    st.dataframe(results, width='stretch', hide_index=True); st.download_button("Download interpreted batch CSV", results.to_csv(index=False).encode("utf-8"), "thalassemia_screening_interpreted.csv", "text/csv")
     with st.expander("Download/view ML feature matrix", expanded=False):
         features = ml_feature_matrix(df)
-        st.dataframe(features, use_container_width=True, hide_index=True)
+        st.dataframe(features, width='stretch', hide_index=True)
         st.download_button("Download ML feature matrix CSV", features.to_csv(index=False).encode("utf-8"), "thalassemia_ml_feature_matrix.csv", "text/csv")
     v1,v2=st.columns(2)
-    with v1: st.plotly_chart(batch_risk_distribution(results), use_container_width=True)
-    with v2: st.plotly_chart(score_heatmap(results), use_container_width=True)
-    st.plotly_chart(batch_mcv_hba2_scatter(results), use_container_width=True); st.plotly_chart(population_sankey(results), use_container_width=True)
+    with v1: st.plotly_chart(batch_risk_distribution(results), width='stretch')
+    with v2: st.plotly_chart(score_heatmap(results), width='stretch')
+    st.plotly_chart(batch_mcv_hba2_scatter(results), width='stretch'); st.plotly_chart(population_sankey(results), width='stretch')
 
 production_footer()

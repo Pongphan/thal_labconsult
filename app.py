@@ -75,7 +75,7 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-st.plotly_chart(thalassemia_spectrum_chart(), use_container_width=True)
+st.plotly_chart(thalassemia_spectrum_chart(), width='stretch')
 
 section("Embedded demo population", "Use the built-in data to verify dashboard behavior before uploading local laboratory data.")
 
@@ -91,7 +91,7 @@ st.markdown(
 
 demo = analyze_dataframe(example_screening_dataframe())
 
-st.plotly_chart(population_sankey(demo), use_container_width=True)
+st.plotly_chart(population_sankey(demo), width='stretch')
 
 section("Platform Roadmap")
 p1, p2, p3 = st.columns(3)
@@ -108,6 +108,41 @@ with p2:
 with p3:
     st.markdown(
         '<div class="production-card"><div class="nav-icon">🔗</div><div class="nav-title">LIS/LIMS readiness</div><div class="nav-caption">Map sample IDs, instrument exports, QC flags, allele nomenclature, and structured JSON/CSV outputs to the laboratory information workflow.</div></div>',
+        unsafe_allow_html=True,
+    )
+
+contributors_col, advisors_col = st.columns((3, 2))
+with contributors_col:
+    st.markdown(
+        """
+<div class="production-card">
+  <div class="nav-icon">👥</div>
+  <div class="nav-title">Contributors</div>
+  <div class="nav-caption">
+    <ul style="margin:.35rem 0 0 1.1rem; padding:0; line-height:1.75;">
+      <li>นางสาวจารวดี หมื่นจัก</li>
+      <li>นางสาวณัฐธิดา คำพีระเมา</li>
+      <li>นางสาวณีรนุช ธนภัคพสิษฐ์</li>
+    </ul>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+with advisors_col:
+    st.markdown(
+        """
+<div class="production-card">
+  <div class="nav-icon">🎓</div>
+  <div class="nav-title">อาจารย์ที่ปรึกษา</div>
+  <div class="nav-caption">
+    <ul style="margin:.35rem 0 0 1.1rem; padding:0; line-height:1.75;">
+      <li>นางสาวเพ็ญโฉม พงศ์พนิตานนท์</li>
+      <li>นายมานิตย์ นุ้ยนุ่น</li>
+    </ul>
+  </div>
+</div>
+""",
         unsafe_allow_html=True,
     )
 
