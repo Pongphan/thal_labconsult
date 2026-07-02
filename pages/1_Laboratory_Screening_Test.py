@@ -398,6 +398,24 @@ if mode == "Single patient consult":
         st.plotly_chart(hplc_chromatogram(row["hba_percent"], row["hba2e_percent"], row["hbf_percent"], row["hbe_percent"], row.get("bart_percent", 0), row.get("hbh_percent", 0), row.get("hbcs_percent", 0), row.get("hb_method", "HPLC")), use_container_width=True)
         
     with t3: st.plotly_chart(reflex_sankey(result), use_container_width=True)
+
+    section("Evidence and recommendations")
+    ev_col, rec_col = st.columns(2)
+    with ev_col:
+        with st.container(border=True):
+            st.markdown("**Evidence**")
+            for item in result.evidence:
+                st.markdown(f"- {item}")
+    with rec_col:
+        with st.container(border=True):
+            st.markdown("**Recommendations**")
+            for item in result.recommendations:
+                st.markdown(f"- {item}")
+            if result.caveats:
+                st.markdown("**Caveats**")
+                for item in result.caveats:
+                    st.markdown(f"- {item}")
+    
     section("Download consult report")
     report_md=screening_report_markdown(result); c1,c2=st.columns(2)
     with c1: st.download_button("Download Markdown report", report_md.encode("utf-8"), f"{result.sample_id}_thal_consult.md", "text/markdown")
