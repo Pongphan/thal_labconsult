@@ -435,6 +435,16 @@ def panel_coverage_treemap(db: pd.DataFrame) -> go.Figure:
         },
         hover_data=hover_data,
     )
+    treemap_text_colors = []
+    for node_id, parent_id in zip(fig.data[0].ids, fig.data[0].parents):
+        key = str(node_id or parent_id).lower()
+        if key == "alpha" or key.startswith("alpha/"):
+            treemap_text_colors.append("#000000")
+        elif key == "beta" or key.startswith("beta/"):
+            treemap_text_colors.append("#FFFFFF")
+        else:
+            treemap_text_colors.append(neutral["text"])
+
     fig.update_traces(
         branchvalues="total",
         marker=dict(
@@ -447,6 +457,7 @@ def panel_coverage_treemap(db: pd.DataFrame) -> go.Figure:
         ),
         selector=dict(type="treemap"),
         textinfo="label+value+percent parent",
+        textfont=dict(color=treemap_text_colors, size=12),
         texttemplate="<b>%{label}</b><br>%{value} targets<br>%{percentParent:.0%} of parent",
         hovertemplate=(
             "<b>%{label}</b><br>"
@@ -460,7 +471,7 @@ def panel_coverage_treemap(db: pd.DataFrame) -> go.Figure:
         maxdepth=4,
     )
     fig.update_layout(
-        uniformtext=dict(minsize=11, mode="hide"),
+        uniformtext=dict(minsize=10, mode="show"),
         colorway=[HEM_COLORS["cyan"], HEM_COLORS["blood2"], HEM_COLORS["plasma"], HEM_COLORS["green"]],
     )
     return _theme_layout(fig, "Molecular panel coverage map", 560)
