@@ -343,6 +343,13 @@ def inject_css() -> None:
             --heading:#16212B; --body-text:#24303F; --secondary-text:#536672; --soft-text:#6F7F89;
             --inverse-text:#FFFFFF; --code-bg:rgba(255,255,255,.56); --code-text:#741026;
             --radius:8px; --radius-sm:6px;
+            --nav-card-height:196px;
+            --nav-active-bg:linear-gradient(135deg, #0B6674 0%, #A9183A 58%, #C98714 100%);
+            --nav-active-border:rgba(255,255,255,.74);
+            --nav-active-shadow:0 28px 86px rgba(116,16,38,.28);
+            --nav-active-text:#FFFFFF;
+            --nav-active-muted:rgba(255,255,255,.88);
+            --nav-active-badge-bg:rgba(255,255,255,.18);
         }
         body,
         [data-testid="stAppViewContainer"] {
@@ -352,6 +359,42 @@ def inject_css() -> None:
         .main .block-container {
             max-width: 1500px;
             padding-top: .85rem;
+        }
+        html {
+            font-size: 17px;
+        }
+        div[data-testid="stMarkdownContainer"],
+        div[data-testid="stMarkdownContainer"] p,
+        div[data-testid="stMarkdownContainer"] li {
+            font-size: 1rem;
+            line-height: 1.62;
+        }
+        label[data-testid="stWidgetLabel"],
+        label[data-testid="stWidgetLabel"] p,
+        div[data-testid="stWidgetLabel"] p,
+        div[role="radiogroup"] label,
+        div[data-testid="stCheckbox"] label {
+            font-size: .98rem !important;
+            line-height: 1.35 !important;
+            font-weight: 760 !important;
+        }
+        input,
+        textarea,
+        div[data-baseweb="select"] * {
+            font-size: 1rem !important;
+        }
+        .stButton button,
+        .stDownloadButton button,
+        div[data-testid="stFormSubmitButton"] button,
+        div[data-testid="stFileUploaderDropzone"] button {
+            min-height: 2.72rem;
+            font-size: 1rem !important;
+            line-height: 1.2 !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"],
+        .stTabs [data-baseweb="tab"] {
+            min-height: 2.6rem;
+            font-size: 1rem !important;
         }
         .app-topbar,
         .hero-card,
@@ -431,6 +474,54 @@ def inject_css() -> None:
             margin-top: .2rem;
             padding: .78rem .9rem;
         }
+        div[data-testid="stPageLink"],
+        .nav-card-current {
+            margin-bottom: .45rem;
+        }
+        div[data-testid="stPageLink"],
+        div[data-testid="stPageLink"] a,
+        .nav-card-current {
+            box-sizing: border-box !important;
+            height: var(--nav-card-height) !important;
+            min-height: var(--nav-card-height) !important;
+        }
+        div[data-testid="stPageLink"] a,
+        .nav-card-current {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            gap: .32rem;
+            overflow: hidden;
+        }
+        div[data-testid="stPageLink"] a {
+            font-size: 1rem !important;
+        }
+        div[data-testid="stPageLink"] a p {
+            margin: 0 !important;
+            font-size: 1rem !important;
+            line-height: 1.44 !important;
+        }
+        div[data-testid="stPageLink"] a strong,
+        .nav-title {
+            font-size: 1.14rem !important;
+            line-height: 1.22 !important;
+        }
+        .nav-icon {
+            font-size: 2.12rem;
+            line-height: 1;
+            margin-bottom: .05rem;
+        }
+        .nav-caption {
+            min-height: 0;
+            font-size: .98rem;
+            line-height: 1.44;
+        }
+        .nav-badge,
+        div[data-testid="stPageLink"] a code {
+            align-self: flex-start;
+            font-size: .78rem !important;
+            line-height: 1.1 !important;
+        }
         .brand-mark,
         .active-module-badge,
         .flow-index,
@@ -451,11 +542,22 @@ def inject_css() -> None:
         }
         .nav-card-current .nav-title,
         .nav-card-current .nav-caption {
-            color: var(--heading) !important;
+            color: var(--nav-active-text) !important;
+        }
+        .nav-card-current {
+            background: var(--nav-active-bg) !important;
+            border-color: var(--nav-active-border) !important;
+            box-shadow: var(--nav-active-shadow), inset 0 1px 0 rgba(255,255,255,.32) !important;
+        }
+        .nav-card-current .nav-caption {
+            color: var(--nav-active-muted) !important;
+        }
+        .nav-card-current .nav-icon {
+            color: var(--nav-active-text) !important;
         }
         .nav-card-current .nav-badge {
-            color: var(--inverse-text) !important;
-            background: linear-gradient(135deg, var(--accent-1), var(--accent-2)) !important;
+            color: var(--nav-active-text) !important;
+            background: var(--nav-active-badge-bg) !important;
             border-color: rgba(255,255,255,.35) !important;
         }
         div[data-testid="stPageLink"] a,
@@ -490,7 +592,34 @@ def inject_css() -> None:
         }
         .metric-label {
             color: var(--soft-text);
+            font-size: .86rem;
             text-transform: none;
+        }
+        .metric-value {
+            font-size: 2.22rem;
+        }
+        .metric-caption {
+            font-size: .98rem;
+            line-height: 1.45;
+        }
+        .section-title {
+            font-size: 1.56rem;
+            line-height: 1.22;
+        }
+        .subtle,
+        .footer-note {
+            font-size: 1rem;
+            line-height: 1.55;
+        }
+        .pill {
+            font-size: .9rem !important;
+        }
+        .warn-box,
+        .danger-box,
+        .success-box,
+        .flow-step {
+            font-size: 1rem;
+            line-height: 1.58;
         }
         .metric-value,
         .section-title,
@@ -597,6 +726,12 @@ def inject_css() -> None:
                 --glass-shadow:0 22px 70px rgba(0,0,0,.38);
                 --heading:#F5FAFC; --body-text:#E8F0F3; --secondary-text:#C7D4DA; --soft-text:#9FB0B8;
                 --inverse-text:#071117; --code-bg:rgba(255,255,255,.08); --code-text:#FFD5DD;
+                --nav-active-bg:linear-gradient(135deg, #7CEEFF 0%, #FF7E99 56%, #FFD36A 100%);
+                --nav-active-border:rgba(255,255,255,.52);
+                --nav-active-shadow:0 28px 90px rgba(67,195,215,.22);
+                --nav-active-text:#071117;
+                --nav-active-muted:rgba(7,17,23,.74);
+                --nav-active-badge-bg:rgba(7,17,23,.10);
             }
             .hero-eyebrow {
                 color: var(--accent-1);
@@ -624,13 +759,29 @@ def inject_css() -> None:
         }
 
         @media (max-width: 900px) {
+            :root { --nav-card-height: 186px; }
+            html { font-size: 16.5px; }
             .app-topbar { align-items:flex-start; flex-direction: column; }
             .topbar-status { justify-content:flex-start; }
             .active-module-badge { white-space: normal; }
             .nav-caption { min-height: auto; }
-            div[data-testid="stPageLink"] a, .nav-card-current { min-height: auto !important; }
+            div[data-testid="stPageLink"],
+            div[data-testid="stPageLink"] a,
+            .nav-card-current {
+                height: var(--nav-card-height) !important;
+                min-height: var(--nav-card-height) !important;
+            }
             .hero-card { padding: 1.55rem 1.35rem; }
-            .hero-title { font-size: 2.25rem; }
+            .hero-title { font-size: 2.45rem; }
+        }
+        @media (max-width: 520px) {
+            :root { --nav-card-height: 176px; }
+            html { font-size: 16px; }
+            .nav-icon { font-size: 1.85rem; }
+            div[data-testid="stPageLink"] a strong,
+            .nav-title { font-size: 1.06rem !important; }
+            .nav-caption,
+            div[data-testid="stPageLink"] a p { font-size: .95rem !important; }
         }
         </style>
         """,

@@ -123,7 +123,7 @@ def inject_expert_css() -> None:
             -webkit-backdrop-filter: blur(18px) saturate(1.2);
         }
         .pcr-step b { color: var(--pcr-heading); display: block; margin-bottom: .25rem; }
-        .pcr-step span { color: var(--pcr-text); font-size: .86rem; }
+        .pcr-step span { color: var(--pcr-text); font-size: .94rem; }
         .status-pill {
             display: inline-flex;
             align-items: center;
@@ -132,7 +132,7 @@ def inject_expert_css() -> None:
             padding: .38rem .68rem;
             border: 1px solid var(--pcr-soft-border);
             margin: .15rem .2rem .15rem 0;
-            font-size: .86rem;
+            font-size: .94rem;
             background: var(--pcr-step-bg);
             box-shadow: inset 0 1px 0 var(--glass-highlight);
         }
@@ -151,7 +151,7 @@ def inject_expert_css() -> None:
         }
         .glass-panel h4 { margin-top: 0; margin-bottom: .35rem; color: var(--pcr-heading); }
         .glass-panel p { margin-bottom: 0; color: var(--pcr-text); }
-        .mini-caption { color: var(--pcr-muted); font-size: .84rem; margin-top: -.2rem; }
+        .mini-caption { color: var(--pcr-muted); font-size: .92rem; margin-top: -.2rem; }
         .coverage-summary {
             display: grid;
             grid-template-columns: repeat(4, minmax(130px, 1fr));
@@ -169,25 +169,25 @@ def inject_expert_css() -> None:
         }
         .coverage-summary__label {
             color: var(--pcr-muted);
-            font-size: .76rem;
+            font-size: .82rem;
             font-weight: 800;
             letter-spacing: 0;
             text-transform: uppercase;
         }
         .coverage-summary__value {
             color: var(--pcr-heading);
-            font-size: 1.35rem;
+            font-size: 1.5rem;
             font-weight: 850;
             line-height: 1.15;
             margin-top: .18rem;
         }
         .coverage-summary__caption {
             color: var(--pcr-text);
-            font-size: .82rem;
+            font-size: .92rem;
             margin-top: .25rem;
             overflow-wrap: anywhere;
         }
-        .dataframe th { font-size: 12px !important; }
+        .dataframe th { font-size: .92rem !important; }
 
         @media (prefers-color-scheme: dark) {
             :root {

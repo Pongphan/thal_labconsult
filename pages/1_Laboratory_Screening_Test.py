@@ -26,7 +26,6 @@ with st.container(border=True):
     with tc3:
         mch_thr = st.slider("MCH hypochromia threshold (pg)", 24.0, 29.0, float(DEFAULT_THRESHOLDS["mch_hypochromia"]), .5)
     thresholds = {**DEFAULT_THRESHOLDS, "hba2_beta_trait": hba2_thr, "mcv_microcytosis": mcv_thr, "mch_hypochromia": mch_thr}
-    pills(["in-page settings", "local SOP adjustable", "no sidebar", "review before sign-out"], "blue")
 
 with st.container(border=True):
     st.markdown("**🧭 Select input workflow**")
@@ -191,10 +190,11 @@ if mode == "Single patient consult":
             mcv_interp, 
             mcv_lvl
         )
-        
+
+    st.write("<br>", unsafe_allow_html=True)  # เพิ่มบรรทัดว่างระหว่างแถว
+            
     # --- CBC แถวที่ 2 ---
     c4, c5 = st.columns(2)
-    
     with c4:
         # 4. แปลผล MCV หรือ OF คู่กับ DCIP (ตามเกณฑ์ใหม่)
         oft = row["oft"]
