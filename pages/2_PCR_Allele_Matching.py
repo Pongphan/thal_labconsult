@@ -26,7 +26,6 @@ from thalab.styles import (
     section,
     production_footer,
     top_navigation,
-    tx,
 )
 from thalab.viz import (
     allele_method_bar,
@@ -298,11 +297,11 @@ def _num(series: pd.Series, default: float = np.nan) -> pd.Series:
 
 def workflow_stepper() -> None:
     st.markdown(
-        f"""
+        """
         <div class="pcr-stepper">
-            <div class="pcr-step"><b>1 · {tx("Panel design", "ออกแบบ panel")}</b><span>{tx("Targeted α/β variant knowledge base", "ฐานข้อมูล targeted α/β variant")}</span></div>
-            <div class="pcr-step"><b>2 · {tx("Risk modeling", "จำลองความเสี่ยง")}</b><span>{tx("Parental gametes and offspring genotypes", "gametes ของพ่อแม่และ genotype ของบุตร")}</span></div>
-            <div class="pcr-step"><b>3 · {tx("Counseling view", "มุมมองให้คำปรึกษา")}</b><span>{tx("Phenotype and reproductive-risk classes", "phenotype และระดับ reproductive risk")}</span></div>
+            <div class="pcr-step"><b>1 · Panel design</b><span>Targeted α/β variant knowledge base</span></div>
+            <div class="pcr-step"><b>2 · Risk modeling</b><span>Parental gametes and offspring genotypes</span></div>
+            <div class="pcr-step"><b>3 · Counseling view</b><span>Phenotype and reproductive-risk classes</span></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -320,12 +319,12 @@ def _escape(value: object) -> str:
 def coverage_map_summary(db: pd.DataFrame) -> None:
     if db.empty:
         st.markdown(
-            f"""
+            """
             <div class="coverage-summary">
                 <div class="coverage-summary__item">
-                    <div class="coverage-summary__label">{tx("Active targets", "Targets ที่แสดง")}</div>
+                    <div class="coverage-summary__label">Active targets</div>
                     <div class="coverage-summary__value">0</div>
-                    <div class="coverage-summary__caption">{tx("No targets match the current filters", "ไม่มี target ที่ตรงกับ filter ปัจจุบัน")}</div>
+                    <div class="coverage-summary__caption">No targets match the current filters</div>
                 </div>
             </div>
             """,
@@ -346,22 +345,22 @@ def coverage_map_summary(db: pd.DataFrame) -> None:
         f"""
         <div class="coverage-summary">
             <div class="coverage-summary__item">
-                <div class="coverage-summary__label">{tx("Active targets", "Targets ที่แสดง")}</div>
+                <div class="coverage-summary__label">Active targets</div>
                 <div class="coverage-summary__value">{len(db)}</div>
-                <div class="coverage-summary__caption">{_escape(db["target_code"].nunique())} {tx("unique target codes", "target codes ไม่ซ้ำ")}</div>
+                <div class="coverage-summary__caption">{_escape(db["target_code"].nunique())} unique target codes</div>
             </div>
             <div class="coverage-summary__item">
-                <div class="coverage-summary__label">{tx("Globin balance", "สมดุล globin")}</div>
+                <div class="coverage-summary__label">Globin balance</div>
                 <div class="coverage-summary__value">{len(system_counts)}</div>
                 <div class="coverage-summary__caption">{system_caption}</div>
             </div>
             <div class="coverage-summary__item">
-                <div class="coverage-summary__label">{tx("Largest method", "Method ที่มากสุด")}</div>
+                <div class="coverage-summary__label">Largest method</div>
                 <div class="coverage-summary__value">{_escape(top_method_count)}</div>
                 <div class="coverage-summary__caption">{_escape(top_method)}</div>
             </div>
             <div class="coverage-summary__item">
-                <div class="coverage-summary__label">{tx("Largest class", "Class ที่มากสุด")}</div>
+                <div class="coverage-summary__label">Largest class</div>
                 <div class="coverage-summary__value">{_escape(top_class_count)}</div>
                 <div class="coverage-summary__caption">{_escape(top_class)}</div>
             </div>
@@ -606,13 +605,13 @@ def select_parent_genotypes(system: str, genotype_db: dict[str, list[str]]) -> t
     system_label = system.title()
     st.markdown(f"#### {system_label}-globin")
     p1_label = st.selectbox(
-        tx(f"{system_label} parent 1 genotype", f"{system_label} genotype ของคนที่ 1"),
+        f"{system_label} parent 1 genotype",
         labels,
         index=_default_genotype_index(system, 1, labels),
         key=f"{system}_parent1_genotype",
     )
     p2_label = st.selectbox(
-        tx(f"{system_label} parent 2 genotype", f"{system_label} genotype ของคนที่ 2"),
+        f"{system_label} parent 2 genotype",
         labels,
         index=_default_genotype_index(system, 2, labels),
         key=f"{system}_parent2_genotype",
@@ -633,31 +632,28 @@ def render_couple_risk_results(
     high_risk = float(risk.get("critical", 0) + risk.get("high", 0))
 
     section(
-        tx(f"{system_label}-globin offspring risk", f"ความเสี่ยงบุตรในระบบ {system_label}-globin"),
-        tx(
-            f"Predicted offspring outcomes from the selected {system}-globin parental genotypes.",
-            f"คาดการณ์ผลลัพธ์ของบุตรจาก parental genotypes ของ {system}-globin ที่เลือก.",
-        ),
+        f"{system_label}-globin offspring risk",
+        f"Predicted offspring outcomes from the selected {system}-globin parental genotypes.",
     )
 
     k1, k2, k3, k4, k5 = st.columns(5)
     with k1:
-        metric_card(tx("Parent 1 gametes", "Gametes คนที่ 1"), " / ".join(map(str, p1)), p1_label, "info")
+        metric_card("Parent 1 gametes", " / ".join(map(str, p1)), p1_label, "info")
     with k2:
-        metric_card(tx("Parent 2 gametes", "Gametes คนที่ 2"), " / ".join(map(str, p2)), p2_label, "info")
+        metric_card("Parent 2 gametes", " / ".join(map(str, p2)), p2_label, "info")
     with k3:
-        metric_card(tx("High/Critical", "สูง/วิกฤต"), f"{high_risk:.0f}%", tx("Offspring probability", "โอกาสในบุตร"), "high" if high_risk else "low")
+        metric_card("High/Critical", f"{high_risk:.0f}%", "Offspring probability", "high" if high_risk else "low")
     with k4:
-        metric_card(tx("Outcomes", "ผลลัพธ์"), str(result.shape[0]), tx("Gamete combinations", "ชุด gamete combinations"), "moderate")
+        metric_card("Outcomes", str(result.shape[0]), "Gamete combinations", "moderate")
     with k5:
-        metric_card(tx("Risk classes", "ระดับความเสี่ยง"), str(len(risk)), tx("Phenotype groups", "กลุ่ม phenotype"), "info")
+        metric_card("Risk classes", str(len(risk)), "Phenotype groups", "info")
 
     st.markdown('<div style="height: 0.85rem;"></div>', unsafe_allow_html=True)
-    with st.expander(tx(f"{system_label}-globin offspring genotype evidence table", f"ตารางหลักฐาน genotype ของบุตรในระบบ {system_label}-globin"), expanded=True):
+    with st.expander(f"{system_label}-globin offspring genotype evidence table", expanded=True):
         risk_table = genotype_evidence_table(result)
         st.dataframe(risk_table, width='stretch', hide_index=True)
         st.download_button(
-            tx(f"Download {system}-globin couple-risk table", f"ดาวน์โหลดตาราง couple-risk ของ {system}-globin"),
+            f"Download {system}-globin couple-risk table",
             result.to_csv(index=False).encode("utf-8"),
             f"{system}_globin_couple_risk_expert.csv",
             "text/csv",
@@ -673,18 +669,12 @@ def render_couple_risk_results(
 
     if high_risk > 0:
         clinical_box(
-            tx(
-                f"<b>Genetic counseling alert:</b> selected {system}-globin parental genotypes produce {high_risk:.0f}% high/critical offspring risk in this simplified Mendelian model. Confirm genotype calls, verify phase, and refer for formal genetic counseling before clinical action.",
-                f"<b>แจ้งเตือน genetic counseling:</b> parental genotypes ของ {system}-globin ที่เลือกให้ความเสี่ยงสูง/วิกฤตในบุตร {high_risk:.0f}% ตาม Mendelian model แบบย่อ ควรยืนยัน genotype, phase และส่งปรึกษาพันธุศาสตร์ก่อนใช้ทางคลินิก.",
-            ),
+            f"<b>Genetic counseling alert:</b> selected {system}-globin parental genotypes produce {high_risk:.0f}% high/critical offspring risk in this simplified Mendelian model. Confirm genotype calls, verify phase, and refer for formal genetic counseling before clinical action.",
             "danger",
         )
     else:
         clinical_box(
-            tx(
-                f"No high/critical offspring-risk class was generated from the selected {system}-globin genotype pair. This does not exclude variants outside the selected panel, compound heterozygosity not represented in the demonstration database, or non-thalassemia hemoglobinopathies.",
-                f"ไม่พบ risk class สูง/วิกฤตจาก genotype pair ของ {system}-globin ที่เลือก อย่างไรก็ตามยังไม่ตัด variants นอก panel, compound heterozygosity ที่ไม่ได้อยู่ในฐานข้อมูลตัวอย่าง หรือ hemoglobinopathies อื่นที่ไม่ใช่ธาลัสซีเมีย.",
-            ),
+            f"No high/critical offspring-risk class was generated from the selected {system}-globin genotype pair. This does not exclude variants outside the selected panel, compound heterozygosity not represented in the demonstration database, or non-thalassemia hemoglobinopathies.",
             "success",
         )
 
@@ -697,21 +687,18 @@ def render_couple_risk_results(
 
 inject_expert_css()
 hero(
-    tx("ThalLink: Thalassemia Laboratory Intelligence Platform", "ThalLink: แพลตฟอร์มวิเคราะห์ธาลัสซีเมียทางห้องปฏิบัติการ"),
-    tx(
-        "A molecular hematology command center for α/β-globin panel intelligence and reproductive-risk visualization.",
-        "ศูนย์วิเคราะห์ molecular hematology สำหรับ α/β-globin panel และภาพรวมความเสี่ยงการมีบุตร.",
-    ),
-    tx("Molecular confirmation + genotype-risk engine", "Molecular confirmation + genotype-risk engine"),
+    "ThalLink: Thalassemia Laboratory Intelligence Platform",
+    "A molecular hematology command center for α/β-globin panel intelligence and reproductive-risk visualization.",
+    "Molecular confirmation + genotype-risk engine",
 )
 disclaimer()
 workflow_stepper()
 
 st.markdown(
-    f"""
+    """
     <div class="molecular-hero">
-      <h3>{tx("Molecular panel and counseling workspace", "พื้นที่ทำงาน molecular panel และ counseling")}</h3>
-      <p>{tx("Review α/β-globin target coverage, laboratory methods, allele nomenclature, and counseling-ready reproductive-risk analytics.", "ทบทวน target coverage ของ α/β-globin, วิธีตรวจ, allele nomenclature และ reproductive-risk analytics ที่พร้อมใช้ให้คำปรึกษา.")}</p>
+      <h3>Molecular panel and counseling workspace</h3>
+      <p>Review α/β-globin target coverage, laboratory methods, allele nomenclature, and counseling-ready reproductive-risk analytics.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -720,11 +707,7 @@ st.markdown(
 # Global data objects
 db = cached_allele_database()
 
-tabs = st.tabs([
-    tx("Panel intelligence", "ข้อมูล panel"),
-    tx("Couple genotype risk", "ความเสี่ยงคู่สมรส"),
-    tx("Export report", "ส่งออกรายงาน"),
-])
+tabs = st.tabs(["🧬 Panel intelligence", "👪 Couple genotype risk", "📤 Export report"])
 
 
 # -----------------------------------------------------------------------------
@@ -732,11 +715,8 @@ tabs = st.tabs([
 # -----------------------------------------------------------------------------
 with tabs[0]:
     section(
-        tx("Molecular panel intelligence", "ข้อมูล molecular panel"),
-        tx(
-            "Explore whether the current α/β-globin panel is balanced across variant systems, variant classes, and laboratory methods before reviewing patient bands.",
-            "สำรวจว่า panel α/β-globin ปัจจุบันครอบคลุม variant systems, variant classes และวิธีตรวจได้สมดุลหรือไม่ก่อนทบทวน band ของผู้ป่วย.",
-        ),
+        "Molecular panel intelligence",
+        "Explore whether the current α/β-globin panel is balanced across variant systems, variant classes, and laboratory methods before reviewing patient bands.",
     )
 
     total_targets = len(db)
@@ -747,29 +727,29 @@ with tabs[0]:
 
     m1, m2, m3, m4, m5 = st.columns(5)
     with m1:
-        metric_card(tx("Total targets", "Targets ทั้งหมด"), str(total_targets), tx("Validated panel entries", "รายการ panel ที่ validate แล้ว"), "info")
+        metric_card("Total targets", str(total_targets), "Validated panel entries", "info")
     with m2:
         metric_card("α-globin", str(alpha_n), "HBA deletion/nondeletion", "moderate")
     with m3:
         metric_card("β-globin", str(beta_n), "HBB β0/β+/structural", "high")
     with m4:
-        metric_card(tx("Methods", "วิธีตรวจ"), str(methods_n), "Gap-PCR / ARMS / sequencing", "low")
+        metric_card("Methods", str(methods_n), "Gap-PCR / ARMS / sequencing", "low")
     with m5:
-        metric_card(tx("Classes", "Classes"), str(classes_n), tx("Variant categories", "กลุ่ม variant"), "info")
+        metric_card("Classes", str(classes_n), "Variant categories", "info")
 
     control_left, control_right = st.columns([1.2, 0.8])
     with control_left:
-        search = st.text_input(tx("Search target, allele, method, or class", "ค้นหา target, allele, method หรือ class"), value="", placeholder="e.g., HbE, SEA, CD41/42, gap-PCR")
+        search = st.text_input("Search target, allele, method, or class", value="", placeholder="e.g., HbE, SEA, CD41/42, gap-PCR")
     with control_right:
-        sort_mode = st.selectbox(tx("Prioritize table by", "จัดลำดับตารางตาม"), ["system", "variant_class", "method", "common_name"], index=1)
+        sort_mode = st.selectbox("Prioritize table by", ["system", "variant_class", "method", "common_name"], index=1)
 
     f1, f2, f3 = st.columns(3)
     with f1:
-        sys_filter = st.multiselect(tx("Globin system", "ระบบ globin"), sorted(db["system"].dropna().astype(str).unique()), default=sorted(db["system"].dropna().astype(str).unique()))
+        sys_filter = st.multiselect("Globin system", sorted(db["system"].dropna().astype(str).unique()), default=sorted(db["system"].dropna().astype(str).unique()))
     with f2:
-        class_filter = st.multiselect(tx("Variant class", "Variant class"), sorted(db["variant_class"].dropna().astype(str).unique()), default=sorted(db["variant_class"].dropna().astype(str).unique()))
+        class_filter = st.multiselect("Variant class", sorted(db["variant_class"].dropna().astype(str).unique()), default=sorted(db["variant_class"].dropna().astype(str).unique()))
     with f3:
-        method_filter = st.multiselect(tx("Method", "วิธีตรวจ"), sorted(db["method"].dropna().astype(str).unique()), default=sorted(db["method"].dropna().astype(str).unique()))
+        method_filter = st.multiselect("Method", sorted(db["method"].dropna().astype(str).unique()), default=sorted(db["method"].dropna().astype(str).unique()))
 
     view = db[
         db["system"].astype(str).isin(sys_filter)
@@ -797,15 +777,12 @@ with tabs[0]:
             st.plotly_chart(panel_coverage_treemap(view), width='stretch', theme=None)
 
     molecular_panel(
-        tx("Usability note", "หมายเหตุการใช้งาน"),
-        tx(
-            "Before adopting this page in a production laboratory, replace the demonstration allele panel with your locally validated SOP panel, positive controls, primer lot information, and reporting nomenclature.",
-            "ก่อนใช้ในห้องปฏิบัติการจริง ให้เปลี่ยน demonstration allele panel เป็น SOP panel ที่ validate ในพื้นที่ พร้อม positive controls, primer lot information และ reporting nomenclature.",
-        ),
+        "Usability note",
+        "Before adopting this page in a production laboratory, replace the demonstration allele panel with your locally validated SOP panel, positive controls, primer lot information, and reporting nomenclature.",
     )
     st.dataframe(view, width='stretch', hide_index=True)
     st.download_button(
-        tx("Download filtered allele knowledge base CSV", "ดาวน์โหลด allele knowledge base CSV ที่กรองแล้ว"),
+        "⬇️ Download filtered allele knowledge base CSV",
         view.to_csv(index=False).encode("utf-8"),
         "thalassemia_filtered_allele_knowledge_base.csv",
         "text/csv",
@@ -818,11 +795,8 @@ with tabs[0]:
 # -----------------------------------------------------------------------------
 with tabs[1]:
     section(
-        tx("Couple genotype reproductive-risk board", "บอร์ดประเมินความเสี่ยง genotype ของคู่สมรส"),
-        tx(
-            "Review confirmed or inferred parental genotypes across alpha- and beta-globin systems. The board converts gamete combinations into offspring genotype, phenotype, and risk-class visual analytics.",
-            "ทบทวน parental genotypes ทั้ง alpha- และ beta-globin ที่ยืนยันหรือคาดการณ์ แล้วแปลง gamete combinations เป็น genotype, phenotype และ risk class ของบุตร.",
-        ),
+        "Couple genotype reproductive-risk board",
+        "Review confirmed or inferred parental genotypes across alpha- and beta-globin systems. The board converts gamete combinations into offspring genotype, phenotype, and risk-class visual analytics.",
     )
 
     alpha_inputs, beta_inputs = st.columns(2)
@@ -841,47 +815,28 @@ with tabs[1]:
 # -----------------------------------------------------------------------------
 with tabs[2]:
     section(
-        tx("Export-ready molecular consult package", "ชุดข้อมูล molecular consult พร้อมส่งออก"),
-        tx(
-            "This tab summarizes which objects should be reviewed before integrating the page into a laboratory report workflow.",
-            "แท็บนี้สรุปรายการที่ควรทบทวนก่อนเชื่อมเข้ากับ workflow รายงานของห้องปฏิบัติการ.",
-        ),
+        "Export-ready molecular consult package",
+        "This tab summarizes which objects should be reviewed before integrating the page into a laboratory report workflow.",
     )
 
     molecular_panel(
-        tx("Recommended production hardening", "ข้อแนะนำก่อนใช้งานจริง"),
-        tx(
-            "Add laboratory-specific primer panels, control-lane QC rules, local HGVS/HbVar nomenclature, audit logs, user authentication, and LIS/LIMS export fields before clinical deployment.",
-            "เพิ่ม primer panels เฉพาะห้องปฏิบัติการ, control-lane QC rules, local HGVS/HbVar nomenclature, audit logs, user authentication และ LIS/LIMS export fields ก่อนใช้ทางคลินิก.",
-        ),
+        "Recommended production hardening",
+        "Add laboratory-specific primer panels, control-lane QC rules, local HGVS/HbVar nomenclature, audit logs, user authentication, and LIS/LIMS export fields before clinical deployment.",
     )
 
     report_items = pd.DataFrame(
         [
-            {
-                tx("Module", "โมดูล"): tx("Allele panel", "Allele panel"),
-                "Export": "CSV",
-                tx("Purpose", "วัตถุประสงค์"): tx("Validated target list and method coverage", "รายการ target ที่ validate แล้วและ method coverage"),
-            },
-            {
-                tx("Module", "โมดูล"): tx("Couple risk", "ความเสี่ยงคู่สมรส"),
-                "Export": "CSV",
-                tx("Purpose", "วัตถุประสงค์"): tx("Punnett genotype/phenotype/risk evidence table", "ตารางหลักฐาน genotype/phenotype/risk จาก Punnett"),
-            },
-            {
-                tx("Module", "โมดูล"): tx("Consult note", "Consult note"),
-                "Export": tx("HTML/PDF extension recommended", "แนะนำต่อยอด HTML/PDF"),
-                tx("Purpose", "วัตถุประสงค์"): tx("Molecular interpretation and genetic-counseling prompt", "คำแปลผล molecular และ prompt สำหรับ genetic counseling"),
-            },
+            {"Module": "Allele panel", "Export": "CSV", "Purpose": "Validated target list and method coverage"},
+            {"Module": "Couple risk", "Export": "CSV", "Purpose": "Punnett genotype/phenotype/risk evidence table"},
+            {"Module": "Consult note", "Export": "HTML/PDF extension recommended", "Purpose": "Molecular interpretation and genetic-counseling prompt"},
         ]
     )
     st.dataframe(report_items, width='stretch', hide_index=True)
 
     st.markdown(
-        tx(
-            "**Suggested next enhancement:** add a one-click molecular consult report generator with these sections: assay panel, allele interpretation, reproductive-risk summary, limitations, and sign-out block.",
-            "**ข้อเสนอแนะต่อไป:** เพิ่มตัวสร้าง molecular consult report แบบคลิกเดียว โดยมีส่วน assay panel, allele interpretation, reproductive-risk summary, limitations และ sign-out block.",
-        )
+        """
+        **Suggested next enhancement:** add a one-click molecular consult report generator with these sections: assay panel, allele interpretation, reproductive-risk summary, limitations, and sign-out block.
+        """
     )
 
 

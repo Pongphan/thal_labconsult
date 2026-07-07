@@ -44,41 +44,6 @@ PAGES: tuple[PageSpec, ...] = (
 )
 
 
-PAGE_TRANSLATIONS_TH = {
-    "Command center": {
-        "title": "Command Center",
-        "caption": "ภาพรวม workflow, population demo และทางเข้าแต่ละโมดูล.",
-        "badge": "หน้าแรก",
-    },
-    "Laboratory screening": {
-        "title": "Laboratory Screening",
-        "caption": "CBC, iron status, Hb typing, OF/DCIP/HbH inclusion และแผนตรวจต่อ.",
-        "badge": "คัดกรอง",
-    },
-    "PCR allele matching": {
-        "title": "PCR Allele Matching",
-        "caption": "ฐานข้อมูล allele ของ α/β-globin และการประเมินความเสี่ยงคู่สมรส.",
-        "badge": "Genotype",
-    },
-}
-
-
-LANG_KEY = "thal_labconsult_language"
-
-
-def current_language() -> str:
-    return st.session_state.get(LANG_KEY, "en")
-
-
-def set_language(language: str) -> None:
-    if language in {"en", "th"}:
-        st.session_state[LANG_KEY] = language
-
-
-def tx(en: str, th: str | None = None) -> str:
-    return th if current_language() == "th" and th is not None else en
-
-
 def current_theme_type() -> str:
     """Return Streamlit's active browser theme with a safe light fallback."""
     try:
@@ -107,7 +72,6 @@ def inject_css() -> None:
             --card-shadow:rgba(63,2,8,.085); --heading:#3F0208; --body-text:#24131A;
             --secondary-text:#654D58; --soft-text:#7B6570; --inverse-text:#FFFFFF;
             --code-bg:#FFE3E8; --code-text:#8D0718;
-            --topbar-control-height:2.38rem;
             color-scheme: light dark;
         }
         html, body, [class*="css"] {
@@ -140,31 +104,6 @@ def inject_css() -> None:
             box-shadow: 0 18px 46px rgba(63,2,8,.075);
             backdrop-filter: blur(18px);
         }
-        .topbar-shell {
-            margin: .15rem 0 .9rem 0;
-            padding: .85rem 1rem;
-        }
-        .st-key-thal_topbar {
-            position: relative;
-            margin: .15rem 0 .9rem 0;
-            padding: .85rem 1rem;
-            border: 1px solid rgba(177,18,38,.11);
-            border-radius: 26px;
-            background: rgba(255,255,255,.78);
-            box-shadow: 0 18px 46px rgba(63,2,8,.075);
-            backdrop-filter: blur(18px);
-        }
-        .st-key-thal_topbar [data-testid="stHorizontalBlock"] {
-            align-items: center;
-        }
-        .topbar-shell [data-testid="stHorizontalBlock"] {
-            align-items: center;
-            gap: .55rem;
-        }
-        .topbar-brand-html {
-            margin: 0;
-            padding: 0;
-        }
         .brand-lockup { display:flex; align-items:center; gap:.78rem; }
         .brand-mark {
             width: 46px; height: 46px; border-radius: 17px;
@@ -176,37 +115,12 @@ def inject_css() -> None:
         .brand-caption { color: var(--muted); font-size: .82rem; margin-top:.12rem; }
         .active-module-badge {
             display:inline-flex; align-items:center; gap:.4rem; border-radius:999px;
-            min-height: var(--topbar-control-height); box-sizing: border-box;
-            padding:0 .75rem; color:#fff; font-weight:850; font-size:.82rem;
+            padding:.45rem .75rem; color:#fff; font-weight:850; font-size:.82rem;
             background: linear-gradient(135deg, var(--blood-800), var(--blood-500));
             box-shadow: 0 10px 24px rgba(177,18,38,.22);
             white-space: nowrap;
         }
         .topbar-status { display:flex; align-items:center; justify-content:flex-end; gap:.5rem; flex-wrap:wrap; }
-        .language-toggle-label {
-            color: var(--secondary-text);
-            font-size: .74rem;
-            font-weight: 850;
-            text-align: right;
-            text-transform: uppercase;
-            letter-spacing: .04rem;
-            line-height: 1.1;
-            white-space: nowrap;
-        }
-        .topbar-shell .stButton button,
-        .st-key-thal_topbar .stButton button,
-        .st-key-thal_topbar div[data-testid="stButton"] button {
-            min-height: var(--topbar-control-height) !important;
-            height: var(--topbar-control-height) !important;
-            padding: 0 .72rem !important;
-            border-radius: 999px !important;
-            font-size: .82rem !important;
-            line-height: 1 !important;
-            white-space: nowrap !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
         .hero-card {
             position: relative; overflow: hidden;
             background: radial-gradient(circle at 7% 18%, rgba(255,255,255,.28), transparent 26%),
@@ -320,8 +234,7 @@ def inject_css() -> None:
 
         /* Shared semantic colors. The media query follows the browser/OS preference
            automatically; Streamlit's native widgets use the paired config.toml themes. */
-        .app-topbar,
-        .st-key-thal_topbar {
+        .app-topbar {
             background: var(--surface);
             border-color: var(--card-border);
             box-shadow: 0 18px 46px var(--card-shadow);
@@ -484,7 +397,6 @@ def inject_css() -> None:
             font-size: 1rem !important;
         }
         .app-topbar,
-        .st-key-thal_topbar,
         .hero-card,
         .nav-card-current,
         div[data-testid="stPageLink"] a,
@@ -558,8 +470,7 @@ def inject_css() -> None:
         .hero-card .hero-subtitle {
             color: rgba(255,255,255,.88) !important;
         }
-        .app-topbar,
-        .st-key-thal_topbar {
+        .app-topbar {
             margin-top: .2rem;
             padding: .78rem .9rem;
         }
@@ -847,82 +758,10 @@ def inject_css() -> None:
             .pill.violet { color:#DEE4FF !important; }
         }
 
-        /* Topbar alignment: Streamlit wraps markdown/buttons in separate blocks,
-           so these scoped rules normalize their vertical rhythm inside the header. */
-        .st-key-thal_topbar {
-            display: flex !important;
-            align-items: center !important;
-        }
-        .st-key-thal_topbar [data-testid="stHorizontalBlock"] {
-            width: 100% !important;
-            align-items: center !important;
-        }
-        .st-key-thal_topbar [data-testid="column"] {
-            display: flex !important;
-            align-items: center !important;
-            min-height: 46px !important;
-        }
-        .st-key-thal_topbar [data-testid="column"] > div,
-        .st-key-thal_topbar div[data-testid="stElementContainer"],
-        .st-key-thal_topbar div[data-testid="stButton"] {
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-        }
-        .st-key-thal_topbar div[data-testid="stMarkdownContainer"],
-        .st-key-thal_topbar div[data-testid="stMarkdownContainer"] p {
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 1 !important;
-        }
-        .st-key-thal_topbar .topbar-brand-html,
-        .st-key-thal_topbar .topbar-status,
-        .st-key-thal_topbar .language-toggle-label {
-            min-height: var(--topbar-control-height) !important;
-            margin: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-        }
-        .st-key-thal_topbar .topbar-status {
-            justify-content: flex-end !important;
-        }
-        .st-key-thal_topbar .language-toggle-label {
-            justify-content: flex-end !important;
-        }
-        .st-key-thal_topbar .active-module-badge,
-        .st-key-thal_topbar div[data-testid="stButton"] button {
-            min-height: var(--topbar-control-height) !important;
-            height: var(--topbar-control-height) !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0 !important;
-        }
-        .st-key-thal_topbar div[data-testid="stButton"] button[kind="primary"] {
-            background: linear-gradient(135deg, var(--accent-1), var(--accent-2) 58%, var(--accent-3)) !important;
-            border: 1px solid rgba(255,255,255,.62) !important;
-            color: var(--inverse-text) !important;
-            box-shadow: 0 14px 34px rgba(15,127,143,.22), inset 0 1px 0 rgba(255,255,255,.28) !important;
-        }
-        .st-key-thal_topbar div[data-testid="stButton"] button[kind="secondary"] {
-            background: rgba(255,255,255,.32) !important;
-            border: 1px solid var(--glass-border) !important;
-            color: var(--secondary-text) !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,.46) !important;
-        }
-        .st-key-thal_topbar div[data-testid="stButton"] button[kind="secondary"]:hover {
-            background: rgba(255,255,255,.50) !important;
-            color: var(--heading) !important;
-            border-color: rgba(15,127,143,.38) !important;
-        }
-
         @media (max-width: 900px) {
             :root { --nav-card-height: 186px; }
             html { font-size: 16.5px; }
             .app-topbar { align-items:flex-start; flex-direction: column; }
-            .st-key-thal_topbar [data-testid="stHorizontalBlock"] { align-items:center; }
             .topbar-status { justify-content:flex-start; }
             .active-module-badge { white-space: normal; }
             .nav-caption { min-height: auto; }
@@ -959,62 +798,23 @@ def _is_active(page: PageSpec, active: str) -> bool:
     return page.key.strip().lower() == active_clean or page.title.strip().lower() == active_clean
 
 
-def _page_label(page: PageSpec, field: str) -> str:
-    if current_language() == "th":
-        translated = PAGE_TRANSLATIONS_TH.get(page.key, {}).get(field)
-        if translated:
-            return translated
-    return getattr(page, field)
-
-
 def top_navigation(active: str) -> None:
     """Render only the brand/status bar. The card navigation is rendered under the page hero."""
     st.session_state["_thal_active_nav"] = active
-    if LANG_KEY not in st.session_state:
-        st.session_state[LANG_KEY] = "en"
-
-    active_names_th = {
-        "Command center": "ศูนย์ควบคุม",
-        "Laboratory screening": "คัดกรองทางห้องปฏิบัติการ",
-        "PCR allele matching": "จับคู่ PCR allele",
-    }
-    status_prefix = "ใช้งานอยู่" if current_language() == "th" else "Active"
-    language_label = "ภาษา" if current_language() == "th" else "Language"
-    active_label = active_names_th.get(active, active) if current_language() == "th" else active
-
-    with st.container(border=True, key="thal_topbar"):
-        brand_col, status_col, label_col, en_col, th_col = st.columns(
-            [5.0, 1.9, .65, .72, .72],
-            vertical_alignment="center",
-            gap="small",
-        )
-        with brand_col:
-            st.markdown(
-                """
-                <div class="topbar-brand-html">
-                  <div class="brand-lockup">
-                    <div class="brand-mark">🩸</div>
-                    <div><div class="brand-title">ThalLink Laboratory Intelligence</div><div class="brand-caption"></div></div>
-                  </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with status_col:
-            st.markdown(
-                f'<div class="topbar-status"><div class="active-module-badge">{_e(status_prefix)} · {_e(active_label)}</div></div>',
-                unsafe_allow_html=True,
-            )
-        with label_col:
-            st.markdown(f'<div class="language-toggle-label">{_e(language_label)}</div>', unsafe_allow_html=True)
-        with en_col:
-            if st.button("EN", key="set_thal_lang_en", type="primary" if current_language() == "en" else "secondary", use_container_width=True):
-                set_language("en")
-                st.rerun()
-        with th_col:
-            if st.button("ไทย", key="set_thal_lang_th", type="primary" if current_language() == "th" else "secondary", use_container_width=True):
-                set_language("th")
-                st.rerun()
+    st.markdown(
+        f"""
+        <div class="app-topbar">
+          <div class="brand-lockup">
+            <div class="brand-mark">🩸</div>
+            <div><div class="brand-title">ThalLink Laboratory Intelligence</div><div class="brand-caption"></div></div>
+          </div>
+          <div class="topbar-status">
+            <div class="active-module-badge">Active · {_e(active)}</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def page_card_navigation(active: str | None = None) -> None:
@@ -1029,25 +829,19 @@ def page_card_navigation(active: str | None = None) -> None:
     for col, page in zip(cols, PAGES):
         with col:
             if _is_active(page, active):
-                title = _page_label(page, "title")
-                caption = _page_label(page, "caption")
-                badge = _page_label(page, "badge")
                 st.markdown(
                     f"""
                     <div class="nav-card-current">
-                      <span class="nav-badge">{_e(tx("Current", "ปัจจุบัน"))} · {_e(badge)}</span>
+                      <span class="nav-badge">Current · {_e(page.badge)}</span>
                       <div class="nav-icon">{_e(page.icon)}</div>
-                      <div class="nav-title">{_e(title)}</div>
-                      <div class="nav-caption">{_e(caption)}</div>
+                      <div class="nav-title">{_e(page.title)}</div>
+                      <div class="nav-caption">{_e(page.caption)}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
             else:
-                title = _page_label(page, "title")
-                caption = _page_label(page, "caption")
-                badge = _page_label(page, "badge")
-                label = f"**{title}**  \n{caption}  \n\n`{badge}`"
+                label = f"**{page.title}**  \n{page.caption}  \n\n`{page.badge}`"
                 st.page_link(page.path, label=label, icon=page.icon, width='stretch')
 
 
@@ -1093,14 +887,14 @@ def pills(items: list[str], color: str = "red") -> None:
 
 def disclaimer() -> None:
     st.markdown(
-        f"""<div class="warn-box"><b>{tx("Laboratory decision support only.", "ใช้เพื่อช่วยตัดสินใจทางห้องปฏิบัติการเท่านั้น")}</b> {tx("Interpretive statements should be reviewed by a qualified hematology laboratory professional. CBC indices and Hb fractions can suggest carrier states, but confirmatory Hb analysis, iron studies, and/or molecular testing are required in clinically important or reproductive-risk settings.", "ข้อความแปลผลควรผ่านการทบทวนโดยผู้เชี่ยวชาญทางห้องปฏิบัติการโลหิตวิทยา ค่า CBC และ Hb fractions ช่วยชี้ภาวะพาหะได้ แต่ในกรณีสำคัญทางคลินิกหรือมีความเสี่ยงต่อการมีบุตร ควรยืนยันด้วย Hb analysis, iron studies และ/หรือ molecular testing.")}</div>""",
+        """<div class="warn-box"><b>Laboratory decision support only.</b> Interpretive statements should be reviewed by a qualified hematology laboratory professional. CBC indices and Hb fractions can suggest carrier states, but confirmatory Hb analysis, iron studies, and/or molecular testing are required in clinically important or reproductive-risk settings.</div>""",
         unsafe_allow_html=True,
     )
 
 
 def production_footer() -> None:
     st.markdown(
-        f'<div class="footer-note">{tx("ThalLink is designed as a validated-laboratory decision-support interface. Confirm local cutoffs, molecular panels, QC rules, and reporting language before production sign-out.", "ThalLink ออกแบบเป็นระบบช่วยตัดสินใจสำหรับห้องปฏิบัติการที่ผ่านการตรวจสอบ ควรยืนยัน cutoffs, molecular panels, QC rules และภาษารายงานของหน่วยงานก่อนใช้งานจริง.")}</div>',
+        '<div class="footer-note">ThalLink is designed as a validated-laboratory decision-support interface. Confirm local cutoffs, molecular panels, QC rules, and reporting language before production sign-out.</div>',
         unsafe_allow_html=True,
     )
 
