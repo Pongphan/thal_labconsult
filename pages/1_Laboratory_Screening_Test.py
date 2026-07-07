@@ -5,50 +5,371 @@ import streamlit as st
 from thalab.core import DEFAULT_THRESHOLDS, SCREENING_COLUMNS, analyze_dataframe, analyze_screening, example_screening_dataframe
 from thalab.ml import ml_feature_matrix, phenotype_similarity
 from thalab.reporting import screening_report_markdown, to_json_bytes
-from thalab.styles import clinical_box, disclaimer, hero, inject_css, metric_card, pills, production_footer, section, top_navigation
+from thalab.styles import clinical_box, current_language, disclaimer, hero, inject_css, metric_card, pills, production_footer, section, top_navigation
 from thalab.viz import batch_mcv_hba2_scatter, batch_risk_distribution, cbc_reference_bars, diagnostic_waterfall, hb_fraction_donut, hplc_chromatogram, mcv_hba2_quadrant, population_sankey, reflex_sankey, risk_gauge, score_heatmap, score_radar
+
+
+OPTION_LABELS_TH = {
+    "Single patient consult": "ปรึกษารายบุคคล",
+    "Batch CSV dashboard": "แดชบอร์ด CSV หลายราย",
+    "Female": "หญิง",
+    "Male": "ชาย",
+    "Other/Not specified": "อื่นๆ / ไม่ระบุ",
+    "Negative": "ลบ",
+    "Positive": "บวก",
+    "HPLC": "HPLC",
+    "CZE": "CZE",
+}
+
+
+RESULT_TEXT_TH = {
+    "Critical review": "ต้องทบทวนเร่งด่วน",
+    "High": "ความเสี่ยงสูง",
+    "Moderate": "ความเสี่ยงปานกลาง",
+    "Low / inconclusive": "ความเสี่ยงต่ำ / ยังสรุปไม่ได้",
+    "Suspected α-thalassemia / HbH Disease Spectrum": "สงสัยกลุ่ม α-thalassemia / HbH disease",
+    "Suspected Hb E / β-globin structural variant pattern": "สงสัย Hb E / ความผิดปกติของ β-globin",
+    "Suspected Beta-Thalassemia Trait with or without alpha-thalassemia": "สงสัยพาหะ β-thalassemia ร่วม/ไม่ร่วม α-thalassemia",
+    "Suspected Beta-Thalassemia or HPFH": "สงสัย β-thalassemia หรือ HPFH",
+    "Normal Hb Typing Pattern (AA)": "รูปแบบ Hb typing ปกติ (AA)",
+    "β-thalassemia trait / HBB variant pattern": "รูปแบบพาหะ β-thalassemia / HBB variant",
+    "α-thalassemia carrier / HbH-spectrum pattern": "รูปแบบพาหะ α-thalassemia / HbH spectrum",
+    "HbE / β-globin structural variant pattern": "รูปแบบ HbE / β-globin structural variant",
+    "Iron deficiency or mixed microcytosis pattern": "รูปแบบขาดธาตุเหล็กหรือ microcytosis แบบผสม",
+}
+
+
+def tx(en: str, th: str | None = None) -> str:
+    return th if current_language() == "th" and th is not None else en
+
+
+def option_label(option: str) -> str:
+    return tx(option, OPTION_LABELS_TH.get(option, option))
+
+
+def clinical_text(text: str) -> str:
+    if current_language() != "th":
+        return text
+    return RESULT_TEXT_TH.get(text, text)
+
+
+def safe_float(row: dict, key: str, default: float = float("nan")) -> float:
+    try:
+        value = row.get(key, default)
+        if pd.isna(value):
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def is_positive(row: dict, key: str) -> bool:
+    return str(row.get(key, "")).strip().lower() in {"positive", "pos", "+", "detected", "present", "true", "1"}
+
+
+def is_known(value: float) -> bool:
+    return not pd.isna(value)
+
+
+def add_differential(
+    items: list[dict[str, str]],
+    condition: str,
+    condition_th: str,
+    likelihood: str,
+    likelihood_th: str,
+    pattern: str,
+    pattern_th: str,
+    next_step: str,
+    next_step_th: str,
+    level: str,
+) -> None:
+    items.append(
+        {
+            "condition": condition,
+            "condition_th": condition_th,
+            "likelihood": likelihood,
+            "likelihood_th": likelihood_th,
+            "pattern": pattern,
+            "pattern_th": pattern_th,
+            "next_step": next_step,
+            "next_step_th": next_step_th,
+            "level": level,
+        }
+    )
+
+
+def hematology_differentials(row: dict, thresholds: dict[str, float]) -> list[dict[str, str]]:
+    hb = safe_float(row, "hb_g_dl")
+    hct = safe_float(row, "hct_percent")
+    rbc = safe_float(row, "rbc_10e12_l")
+    mcv = safe_float(row, "mcv_fl")
+    mch = safe_float(row, "mch_pg")
+    rdw = safe_float(row, "rdw_percent")
+    retic = safe_float(row, "retic_percent")
+    ferritin = safe_float(row, "ferritin_ng_ml")
+    hba2e = safe_float(row, "hba2e_percent")
+    hbe = safe_float(row, "hbe_percent")
+    sex = str(row.get("sex", "Female"))
+
+    hb_cutoff = 13.0 if sex == "Male" else 12.0
+    hct_cutoff = 40.0 if sex == "Male" else 36.0
+    ferritin_low_cutoff = 30.0 if sex == "Male" else 15.0
+    ferritin_high_cutoff = 400.0 if sex == "Male" else 150.0
+    mcv_low_cutoff = thresholds.get("mcv_microcytosis", DEFAULT_THRESHOLDS["mcv_microcytosis"])
+    mch_low_cutoff = thresholds.get("mch_hypochromia", DEFAULT_THRESHOLDS["mch_hypochromia"])
+
+    anemia = (is_known(hb) and hb < hb_cutoff) or (is_known(hct) and hct < hct_cutoff)
+    erythrocytosis = (is_known(hb) and hb > (16.5 if sex == "Male" else 16.0)) or (is_known(hct) and hct > (49.0 if sex == "Male" else 48.0))
+    micro = is_known(mcv) and mcv < mcv_low_cutoff
+    macro = is_known(mcv) and mcv >= 100.0
+    hypo = is_known(mch) and mch < mch_low_cutoff
+    rdw_high = is_known(rdw) and rdw > thresholds.get("rdw_high", DEFAULT_THRESHOLDS["rdw_high"])
+    retic_high = is_known(retic) and retic >= 2.5
+    retic_low = is_known(retic) and retic < 0.5
+    ferritin_low = is_known(ferritin) and ferritin < ferritin_low_cutoff
+    ferritin_high = is_known(ferritin) and ferritin > ferritin_high_cutoff
+    hba2e_high = is_known(hba2e) and hba2e >= thresholds.get("hba2_beta_trait", DEFAULT_THRESHOLDS["hba2_beta_trait"])
+    dcip_pos = is_positive(row, "dcip")
+    hbe_present = (is_known(hbe) and hbe >= DEFAULT_THRESHOLDS["hbe_present"]) or (dcip_pos and is_known(hba2e) and hba2e > 10.0)
+
+    items: list[dict[str, str]] = []
+
+    if anemia and ferritin_low:
+        add_differential(
+            items,
+            "Iron deficiency anemia or mixed iron deficiency",
+            "โลหิตจางจากการขาดธาตุเหล็ก หรือภาวะขาดธาตุเหล็กร่วม",
+            "High support" if micro or hypo or rdw_high else "Consider",
+            "สนับสนุนมาก" if micro or hypo or rdw_high else "ควรพิจารณา",
+            f"Ferritin {ferritin:g} ng/mL with {'microcytosis/hypochromia' if micro or hypo else 'anemia'}; RDW {'high' if rdw_high else 'not high'}.",
+            f"Ferritin {ferritin:g} ng/mL ร่วมกับ{'เม็ดเลือดแดงเล็ก/ซีด' if micro or hypo else 'ภาวะซีด'}; RDW {'สูง' if rdw_high else 'ไม่สูง'}.",
+            "Correlate with iron/TIBC/transferrin saturation, CRP, menstrual/GI blood-loss history, and repeat HbA2 after iron repletion if borderline.",
+            "ตรวจ iron/TIBC/transferrin saturation, CRP, ประวัติเลือดออกประจำเดือน/ทางเดินอาหาร และพิจารณา HbA2 ซ้ำหลังแก้ภาวะขาดธาตุเหล็กหากค่าก้ำกึ่ง.",
+            "danger",
+        )
+
+    if anemia and macro:
+        add_differential(
+            items,
+            "Macrocytic anemia: B12/folate, liver-thyroid disease, medication, marrow stress",
+            "โลหิตจางเม็ดเลือดแดงโต: B12/folate, ตับ-ไทรอยด์, ยา, หรือไขกระดูก",
+            "High support" if mcv >= 105.0 or rdw_high else "Consider",
+            "สนับสนุนมาก" if mcv >= 105.0 or rdw_high else "ควรพิจารณา",
+            f"MCV {mcv:g} fL with anemia; reticulocyte {'elevated' if retic_high else 'not elevated/unknown'}.",
+            f"MCV {mcv:g} fL ร่วมกับภาวะซีด; reticulocyte {'สูง' if retic_high else 'ไม่สูง/ไม่ทราบ'}.",
+            "Review smear, B12, folate, reticulocyte index, TSH, liver tests, alcohol/medication exposure, and marrow evaluation if persistent.",
+            "ทบทวนสเมียร์, B12, folate, reticulocyte index, TSH, liver test, ประวัติแอลกอฮอล์/ยา และพิจารณาประเมินไขกระดูกหากยังผิดปกติ.",
+            "high",
+        )
+
+    if anemia and retic_high:
+        add_differential(
+            items,
+            "Hemolysis or recent blood loss pattern",
+            "รูปแบบที่อาจเข้าได้กับ hemolysis หรือเสียเลือดเร็วๆ นี้",
+            "High support" if retic >= 3.0 else "Consider",
+            "สนับสนุนมาก" if retic >= 3.0 else "ควรพิจารณา",
+            f"Reticulocyte {retic:g}% is elevated in an anemic sample.",
+            f"Reticulocyte {retic:g}% สูงในตัวอย่างที่มีภาวะซีด.",
+            "Add bilirubin, LDH, haptoglobin, DAT, urine hemoglobin, and smear review for schistocytes/spherocytes.",
+            "เพิ่ม bilirubin, LDH, haptoglobin, DAT, urine hemoglobin และทบทวนสเมียร์หา schistocytes/spherocytes.",
+            "danger",
+        )
+
+    if anemia and retic_low and not ferritin_low:
+        add_differential(
+            items,
+            "Hypoproliferative anemia: renal/endocrine/marrow suppression pattern",
+            "โลหิตจางแบบสร้างเม็ดเลือดต่ำ: ไต/ต่อมไร้ท่อ/ไขกระดูกถูกกด",
+            "Consider",
+            "ควรพิจารณา",
+            f"Reticulocyte {retic:g}% is low without a low ferritin pattern.",
+            f"Reticulocyte {retic:g}% ต่ำ โดยไม่มีรูปแบบ ferritin ต่ำ.",
+            "Correlate with WBC/platelets, creatinine/eGFR, EPO context, TSH, inflammatory markers, and medication/toxin history.",
+            "ประเมินร่วมกับ WBC/platelets, creatinine/eGFR, บริบท EPO, TSH, inflammatory markers และประวัติยา/สารพิษ.",
+            "moderate",
+        )
+
+    if anemia and ferritin_high and not retic_high:
+        add_differential(
+            items,
+            "Anemia of inflammation/chronic disease or iron sequestration",
+            "โลหิตจางจากการอักเสบ/โรคเรื้อรัง หรือการกักเก็บธาตุเหล็ก",
+            "Consider",
+            "ควรพิจารณา",
+            f"Ferritin {ferritin:g} ng/mL is high with anemia and no reticulocytosis signal.",
+            f"Ferritin {ferritin:g} ng/mL สูง ร่วมกับภาวะซีดและไม่มีสัญญาณ reticulocytosis.",
+            "Check CRP/ESR, transferrin saturation, renal profile, liver profile, and clinical inflammatory or malignant disease context.",
+            "ตรวจ CRP/ESR, transferrin saturation, renal profile, liver profile และบริบทโรคอักเสบหรือมะเร็ง.",
+            "moderate",
+        )
+
+    if micro and ferritin_high and rdw_high and not hba2e_high and not hbe_present:
+        add_differential(
+            items,
+            "Sideroblastic anemia, lead/toxin exposure, or complex microcytosis",
+            "sideroblastic anemia, การสัมผัสตะกั่ว/สารพิษ หรือ microcytosis ซับซ้อน",
+            "Consider",
+            "ควรพิจารณา",
+            f"Microcytosis with high ferritin ({ferritin:g} ng/mL), high RDW, and no strong HbA2/HbE signal.",
+            f"เม็ดเลือดแดงเล็ก ร่วมกับ ferritin สูง ({ferritin:g} ng/mL), RDW สูง และไม่มีสัญญาณ HbA2/HbE ชัด.",
+            "Review smear, lead level when relevant, B6/drug/alcohol exposure, iron saturation, and hematology referral if unexplained.",
+            "ทบทวนสเมียร์, ตรวจระดับตะกั่วเมื่อมีความเสี่ยง, ประวัติ B6/ยา/แอลกอฮอล์, iron saturation และส่งปรึกษาโลหิตวิทยาหากยังไม่ชัด.",
+            "moderate",
+        )
+
+    if anemia and rdw_high and not micro and not macro:
+        add_differential(
+            items,
+            "Mixed or evolving anemia with normocytic indices",
+            "โลหิตจางแบบผสมหรือระยะเริ่มต้นที่ MCV ยังปกติ",
+            "Consider",
+            "ควรพิจารณา",
+            f"RDW {rdw:g}% is high while MCV remains in the normocytic range.",
+            f"RDW {rdw:g}% สูง ขณะที่ MCV ยังอยู่ในช่วง normocytic.",
+            "Consider combined iron/B12/folate deficiency, recent treatment response, renal/inflammatory disease, and smear morphology.",
+            "พิจารณาการขาด iron/B12/folate ร่วมกัน, การตอบสนองหลังรักษา, โรคไต/อักเสบ และลักษณะสเมียร์.",
+            "moderate",
+        )
+
+    if erythrocytosis:
+        add_differential(
+            items,
+            "Erythrocytosis or polycythemia pattern",
+            "รูปแบบเม็ดเลือดแดงสูงหรือ polycythemia",
+            "High support" if (is_known(rbc) and rbc > 6.0) else "Consider",
+            "สนับสนุนมาก" if (is_known(rbc) and rbc > 6.0) else "ควรพิจารณา",
+            f"Hb/Hct {hb:g} g/dL / {hct:g}% exceed sex-adjusted screening thresholds.",
+            f"Hb/Hct {hb:g} g/dL / {hct:g}% สูงกว่าเกณฑ์คัดกรองตามเพศ.",
+            "Repeat CBC when hydrated, assess oxygen saturation/smoking/sleep apnea, EPO level, and JAK2 testing if persistent.",
+            "ตรวจ CBC ซ้ำเมื่อ hydration เหมาะสม, ประเมิน O2 saturation/สูบบุหรี่/sleep apnea, ระดับ EPO และ JAK2 หากยังสูงต่อเนื่อง.",
+            "high",
+        )
+
+    if dcip_pos and not hbe_present:
+        add_differential(
+            items,
+            "Possible unstable hemoglobin or non-E structural variant",
+            "อาจเป็น unstable hemoglobin หรือ structural variant อื่นที่ไม่ใช่ HbE",
+            "Consider",
+            "ควรพิจารณา",
+            "DCIP is positive without a clearly increased HbE fraction.",
+            "DCIP เป็นบวกโดย HbE fraction ยังไม่สูงชัด.",
+            "Confirm with HPLC/CZE peak review, heat/isopropanol stability testing if available, and targeted sequencing when clinically indicated.",
+            "ยืนยันด้วยการทบทวน peak ของ HPLC/CZE, heat/isopropanol stability test หากมี และ sequencing เมื่อมีข้อบ่งชี้.",
+            "moderate",
+        )
+
+    if not items:
+        add_differential(
+            items,
+            "No strong non-thalassemia hematology signal from supplied CBC/iron/Hb data",
+            "ยังไม่พบสัญญาณโรคโลหิตวิทยาอื่นที่ชัดจาก CBC/iron/Hb ที่กรอก",
+            "Low support",
+            "สนับสนุนน้อย",
+            "Current supplied values do not strongly trigger the broader anemia, hemolysis, macrocytosis, or erythrocytosis rules.",
+            "ค่าที่กรอกยังไม่กระตุ้นเกณฑ์ภาวะซีดชนิดอื่น, hemolysis, macrocytosis หรือ erythrocytosis อย่างชัดเจน.",
+            "Continue interpretation with clinical context, smear review, and repeat testing when symptoms or family/population risk remain.",
+            "แปลผลร่วมกับอาการ, สเมียร์ และตรวจซ้ำเมื่อยังมีอาการหรือความเสี่ยงจากครอบครัว/ประชากร.",
+            "info",
+        )
+
+    return items
+
+
+def render_hematology_differentials(row: dict, thresholds: dict[str, float]) -> None:
+    items = hematology_differentials(row, thresholds)
+    section(
+        tx("Other Hematology Differential Review", "วิเคราะห์โรคทางโลหิตวิทยาอื่นๆ"),
+        tx(
+            "Rule-based screening clues beyond thalassemia. These are prompts for follow-up testing, not final diagnoses.",
+            "ข้อบ่งชี้เชิงคัดกรองนอกเหนือจากธาลัสซีเมีย ใช้เป็นแนวทางตรวจต่อ ไม่ใช่การวินิจฉัยสุดท้าย.",
+        ),
+    )
+    clinical_box(
+        tx(
+            "Use this block to avoid anchoring on thalassemia when CBC, iron status, and reticulocyte patterns suggest another hematologic process.",
+            "ส่วนนี้ช่วยลดการยึดติดกับธาลัสซีเมียเพียงอย่างเดียว เมื่อ CBC, iron status และ reticulocyte ชี้ไปที่กระบวนการทางโลหิตวิทยาอื่น.",
+        ),
+        "warn",
+    )
+
+    priority = [item for item in items if item["level"] != "info"][:3] or items[:1]
+    cols = st.columns(len(priority))
+    for col, item in zip(cols, priority):
+        with col:
+            metric_card(
+                tx(item["condition"], item["condition_th"]),
+                tx(item["likelihood"], item["likelihood_th"]),
+                tx(item["pattern"], item["pattern_th"]),
+                item["level"],
+            )
+
+    table = pd.DataFrame(
+        [
+            {
+                tx("Condition", "ภาวะที่พิจารณา"): tx(item["condition"], item["condition_th"]),
+                tx("Likelihood", "น้ำหนักหลักฐาน"): tx(item["likelihood"], item["likelihood_th"]),
+                tx("Triggering pattern", "รูปแบบที่เข้าเกณฑ์"): tx(item["pattern"], item["pattern_th"]),
+                tx("Suggested follow-up", "ตรวจ/ประเมินต่อ"): tx(item["next_step"], item["next_step_th"]),
+            }
+            for item in items
+        ]
+    )
+    st.dataframe(table, width="stretch", hide_index=True)
+
 
 st.set_page_config(page_title="Screening Test | Thal Lab Consult", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
 inject_css()
 top_navigation("Laboratory screening")
 
-hero("ThalLink: Thalassemia Laboratory Intelligence Platform", "Expert consult dashboard for CBC indices, iron status, Hb fractions, OF/DCIP/HbH inclusion, phenotype scoring, and molecular reflex planning.", "CBC + Hb typing + reflex visualization")
+hero(
+    tx("ThalLink: Thalassemia Laboratory Intelligence Platform", "ThalLink: แพลตฟอร์มวิเคราะห์ธาลัสซีเมียทางห้องปฏิบัติการ"),
+    tx(
+        "Expert consult dashboard for CBC indices, iron status, Hb fractions, OF/DCIP/HbH inclusion, phenotype scoring, and molecular reflex planning.",
+        "แดชบอร์ดช่วยปรึกษาผล CBC, iron status, Hb fractions, OF/DCIP/HbH inclusion, phenotype scoring และแผนตรวจ molecular reflex.",
+    ),
+    tx("CBC + Hb typing + reflex visualization", "CBC + Hb typing + ภาพรวม reflex testing"),
+)
 disclaimer()
 
-section("Screening control cards", "Set local SOP thresholds directly on the page. This replaces the old sidebar control panel.")
+section(
+    tx("Screening control cards", "ตั้งค่าเกณฑ์คัดกรอง"),
+    tx("Set local SOP thresholds directly on the page. This replaces the old sidebar control panel.", "ปรับ threshold ตาม SOP ของห้องปฏิบัติการได้จากหน้านี้โดยตรง."),
+)
 with st.container(border=True):
-    st.markdown("**⚙️ Threshold profile**")
+    st.markdown(f"**{tx('Threshold profile', 'ชุดเกณฑ์ Threshold')}**")
     tc1, tc2, tc3 = st.columns(3)
     with tc1:
-        hba2_thr = st.slider("HbA2 threshold for β-thal trait (%)", 3.0, 4.5, float(DEFAULT_THRESHOLDS["hba2_beta_trait"]), .1)
+        hba2_thr = st.slider(tx("HbA2 threshold for β-thal trait (%)", "เกณฑ์ HbA2 สำหรับพาหะ β-thal (%)"), 3.0, 4.5, float(DEFAULT_THRESHOLDS["hba2_beta_trait"]), .1)
     with tc2:
-        mcv_thr = st.slider("MCV microcytosis threshold (fL)", 70.0, 85.0, float(DEFAULT_THRESHOLDS["mcv_microcytosis"]), .5)
+        mcv_thr = st.slider(tx("MCV microcytosis threshold (fL)", "เกณฑ์ MCV เม็ดเลือดแดงเล็ก (fL)"), 70.0, 85.0, float(DEFAULT_THRESHOLDS["mcv_microcytosis"]), .5)
     with tc3:
-        mch_thr = st.slider("MCH hypochromia threshold (pg)", 24.0, 29.0, float(DEFAULT_THRESHOLDS["mch_hypochromia"]), .5)
+        mch_thr = st.slider(tx("MCH hypochromia threshold (pg)", "เกณฑ์ MCH เม็ดเลือดแดงซีด (pg)"), 24.0, 29.0, float(DEFAULT_THRESHOLDS["mch_hypochromia"]), .5)
     thresholds = {**DEFAULT_THRESHOLDS, "hba2_beta_trait": hba2_thr, "mcv_microcytosis": mcv_thr, "mch_hypochromia": mch_thr}
 
 with st.container(border=True):
-    st.markdown("**🧭 Select input workflow**")
-    mode = st.radio("Input mode", ["Single patient consult", "Batch CSV dashboard"], horizontal=True, label_visibility="collapsed")
+    st.markdown(f"**{tx('Select input workflow', 'เลือกรูปแบบการใช้งาน')}**")
+    mode = st.radio(tx("Input mode", "โหมดข้อมูล"), ["Single patient consult", "Batch CSV dashboard"], horizontal=True, label_visibility="collapsed", format_func=option_label)
 
 def patient_form() -> dict:
     with st.form("patient_form"):
-        section("Patient/specimen metadata")
+        section(tx("Patient/specimen metadata", "ข้อมูลผู้ป่วย/สิ่งส่งตรวจ"))
         c1,c2,c3 =st.columns(3)
         with c1:
             sample_id=st.text_input("Sample ID","CASE-EXPERT-001")
         with c2:
-            sex=st.selectbox("Sex",["Female","Male","Other/Not specified"])
+            sex=st.selectbox(tx("Sex", "เพศ"),["Female","Male","Other/Not specified"], format_func=option_label)
         with c3:
-            age=st.number_input("Age",0,120,24)     
+            age=st.number_input(tx("Age", "อายุ"),0,120,24)     
         
         c1,c2 =st.columns(2)
         with c1:
-            pregnant=st.checkbox("Pregnant / antenatal screening"); transfusion_recent=st.checkbox("Recent transfusion")
+            pregnant=st.checkbox(tx("Pregnant / antenatal screening", "ตั้งครรภ์ / คัดกรองฝากครรภ์")); transfusion_recent=st.checkbox(tx("Recent transfusion", "ได้รับเลือดเร็วๆ นี้"))
         with c2:
-            family_history=st.checkbox("Family history / partner carrier known"); smear_target_cells=st.checkbox("Target cells on smear")
+            family_history=st.checkbox(tx("Family history / partner carrier known", "มีประวัติครอบครัว / คู่เป็นพาหะ")); smear_target_cells=st.checkbox(tx("Target cells on smear", "พบ target cells ในสเมียร์"))
         
-        section("Complete blood count (CBC) and iron status")
+        section(tx("Complete blood count (CBC) and iron status", "Complete blood count (CBC) และสถานะธาตุเหล็ก"))
         a1,a2,a3,a4,a5,a6=st.columns(6)
         with a1: hb=st.number_input("Hb (g/dL)",0.0,25.0,11.2,.1)
         with a2: rbc=st.number_input("RBC (10¹²/L)",0.0,10.0,5.8,.1)
@@ -61,15 +382,15 @@ def patient_form() -> dict:
         with b1: ferritin=st.number_input("Ferritin (ng/mL)",0.0,2000.0,85.0,1.0)
         with b2: rdw=st.number_input("RDW (%)",5.0,35.0,14.2,.1)
         with b3: retic=st.number_input("Reticulocyte (%)",0.0,30.0,1.2,.1)
-        with b4: oft=st.selectbox("Osmotic fragility test",["Negative","Positive"],index=1)
-        with b5: dcip=st.selectbox("DCIP for HbE/unstable Hb",["Negative","Positive"])
+        with b4: oft=st.selectbox(tx("Osmotic fragility test", "Osmotic fragility test"),["Negative","Positive"],index=1, format_func=option_label)
+        with b5: dcip=st.selectbox(tx("DCIP for HbE/unstable Hb", "DCIP สำหรับ HbE/unstable Hb"),["Negative","Positive"], format_func=option_label)
 
         hbh_inclusion = "Negative" 
 
-        section("Hemoglobin Typing Results")
+        section(tx("Hemoglobin Typing Results", "ผล Hemoglobin Typing"))
         
         # ใช้ Tabs แทน เพื่อให้สลับหน้าจอได้ทันทีโดยไม่ต้องรันแอปใหม่
-        tab_hplc, tab_cze = st.tabs(["🧪 หลักการ HPLC", "🧪 หลักการ CZE"])
+        tab_hplc, tab_cze = st.tabs([tx("HPLC input", "กรอกผล HPLC"), tx("CZE input", "กรอกผล CZE")])
         
         with tab_hplc:
             hplc_c1, hplc_c2, hplc_c3 = st.columns(3)
@@ -96,9 +417,9 @@ def patient_form() -> dict:
 
         st.markdown("---")
         # ปุ่มนี้เอาไว้ดึงค่าที่ถูกต้องไปรัน 
-        hb_method = st.radio("ยืนยันวิธีที่ใช้ในการวิเคราะห์ผล:", ["HPLC", "CZE"], horizontal=True)
+        hb_method = st.radio(tx("Confirm hemoglobin-analysis method:", "ยืนยันวิธีที่ใช้ในการวิเคราะห์ผล:"), ["HPLC", "CZE"], horizontal=True, format_func=option_label)
         
-        st.form_submit_button("Run expert consult", type="primary")
+        st.form_submit_button(tx("Run expert consult", "เริ่มวิเคราะห์ผล"), type="primary")
 
     # ขั้นตอนเลือกดึงค่าตามที่ผู้ใช้เลือก (ทำงานหลังจากกดปุ่ม Submit)
     if hb_method == "HPLC":
@@ -125,9 +446,9 @@ if mode == "Single patient consult":
     row = patient_form()
     result = analyze_screening(row, thresholds)
     
-    section("Consult summary")
+    section(tx("Consult summary", "สรุปผล Consult"))
     
-    st.markdown("#### 🩸 Complete Blood Count (CBC) & Iron Status")
+    st.markdown(f"#### {tx('Complete Blood Count (CBC) & Iron Status', 'Complete Blood Count (CBC) และสถานะธาตุเหล็ก')}")
     
     # --- CBC แถวที่ 1 ---
     c1, c2, c3 = st.columns(3)
@@ -144,7 +465,7 @@ if mode == "Single patient consult":
         metric_card(
             "Hb / Hct", 
             f"{hb} g/dL / {hct}%", 
-            "ซีด (Anemia)" if is_anemia else "ปกติ (Normal)", 
+            tx("Anemia", "ซีด") if is_anemia else tx("Normal", "ปกติ"), 
             "danger" if is_anemia else "info"
         )
     
@@ -156,7 +477,7 @@ if mode == "Single patient consult":
         metric_card(
             "RDW", 
             f"{rdw}%", 
-            "Anisocytosis (ค่าสูงกว่าปกติ)" if is_high_rdw else "ปกติ (Normal)", 
+            tx("Anisocytosis (high)", "Anisocytosis (สูงกว่าปกติ)") if is_high_rdw else tx("Normal", "ปกติ"), 
             "high" if is_high_rdw else "info"
         )
 
@@ -169,19 +490,19 @@ if mode == "Single patient consult":
         
         # เพิ่มเงื่อนไข Macrocytosis (MCV > 100)
         if mcv > 100.0:
-            mcv_interp = "Macrocytosis"
+            mcv_interp = tx("Macrocytosis", "เม็ดเลือดแดงโต")
             mcv_lvl = "high"
         elif mcv < mcv_thr and mchc < mchc_thr:
-            mcv_interp = "Microcytic Hypochromic"
+            mcv_interp = tx("Microcytic Hypochromic", "เม็ดเลือดแดงเล็กและซีด")
             mcv_lvl = "danger"
         elif mcv < mcv_thr:
-            mcv_interp = "Microcytic"
+            mcv_interp = tx("Microcytic", "เม็ดเลือดแดงเล็ก")
             mcv_lvl = "high"
         elif mchc < mchc_thr:
-            mcv_interp = "Hypochromic"
+            mcv_interp = tx("Hypochromic", "เม็ดเลือดแดงซีด")
             mcv_lvl = "high"
         else:
-            mcv_interp = "Normocytic Normochromic"
+            mcv_interp = tx("Normocytic Normochromic", "ขนาดและสีเม็ดเลือดแดงปกติ")
             mcv_lvl = "info"
             
         metric_card(
@@ -208,19 +529,19 @@ if mode == "Single patient consult":
         # แปลผลตามตาราง
         if of_is_pos and dcip_is_pos:
             # กรณี + , +
-            screen_interp = "Suspected Hb E with or without α-thal and/or β-thal"
+            screen_interp = tx("Suspected Hb E with or without α-thal and/or β-thal", "สงสัย Hb E ร่วม/ไม่ร่วม α-thal และ/หรือ β-thal")
             screen_lvl = "danger"
         elif of_is_pos and not dcip_is_pos:
             # กรณี + , -
-            screen_interp = "Suspected α-thal and/or β-thal"
+            screen_interp = tx("Suspected α-thal and/or β-thal", "สงสัย α-thal และ/หรือ β-thal")
             screen_lvl = "high"
         elif not of_is_pos and dcip_is_pos:
             # กรณี - , +
-            screen_interp = "Suspected Hb E trait"
+            screen_interp = tx("Suspected Hb E trait", "สงสัยพาหะ Hb E")
             screen_lvl = "high"
         else:
             # กรณี - , -
-            screen_interp = "Non-thalassemia or non-clinically important thalassemia"
+            screen_interp = tx("Non-thalassemia or non-clinically important thalassemia", "ไม่เข้าได้กับธาลัสซีเมียสำคัญทางคลินิก หรือไม่ใช่ธาลัสซีเมีย")
             screen_lvl = "info"
             
         # สร้างข้อความแสดงผลบรรทัดรองให้เห็นชัดเจนว่าแต่ละฝั่งเป็น + หรือ -
@@ -266,19 +587,19 @@ if mode == "Single patient consult":
         
         # ตรรกะการประเมินและการแสดงผลข้อความ
         if ferr_low and is_hb_low and is_mcv_normal and is_mch_normal and is_dcip_normal:
-            fe_interp = "Diagnosis Iron Profile"
+            fe_interp = tx("Iron profile review recommended", "แนะนำประเมิน Iron profile")
             fe_lvl = "danger"
         elif ferr_low:
-            fe_interp = "ระดับ Ferritin ต่ำ"
+            fe_interp = tx("Low ferritin", "ระดับ Ferritin ต่ำ")
             fe_lvl = "danger"
         elif ferr_high:
-            fe_interp = "ระดับ Ferritin สูง"
+            fe_interp = tx("High ferritin", "ระดับ Ferritin สูง")
             fe_lvl = "high"
         elif (not is_mcv_normal) or (not is_mch_normal) or (not is_dcip_normal):
-            fe_interp = "ระดับ Ferritin ปกติ (สงสัยพาหะธาลัสซีเมีย/HbE)"
+            fe_interp = tx("Ferritin normal (suspected thalassemia/HbE carrier)", "ระดับ Ferritin ปกติ (สงสัยพาหะธาลัสซีเมีย/HbE)")
             fe_lvl = "high"
         else:
-            fe_interp = "ระดับ Ferritin ปกติ"
+            fe_interp = tx("Ferritin normal", "ระดับ Ferritin ปกติ")
             fe_lvl = "info"
             
         metric_card(
@@ -289,7 +610,7 @@ if mode == "Single patient consult":
         )
         
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("#### 🧬 Hemoglobin Typing Results")
+    st.markdown(f"#### {tx('Hemoglobin Typing Results', 'ผล Hemoglobin Typing')}")
     
     t1, t2 = st.columns(2)
     with t1:
@@ -298,9 +619,9 @@ if mode == "Single patient consult":
         r_lvl = "danger" if r_class == "Critical review" else "high" if r_class == "High" else "moderate" if r_class == "Moderate" else "low"
         
         metric_card(
-            "Risk Class", 
-            r_class, 
-            f"Pattern: {result.top_pattern}", 
+            tx("Risk Class", "ระดับความเสี่ยง"), 
+            clinical_text(r_class), 
+            f"{tx('Pattern', 'รูปแบบ')}: {clinical_text(result.top_pattern)}", 
             r_lvl
         )
         
@@ -324,10 +645,10 @@ if mode == "Single patient consult":
         
         # แปลผลตามเกณฑ์
         if ee_calc <= 60:
-            ee_interp = "EE score <= 60 : Suspected Homozygous HbE"
+            ee_interp = tx("EE score <= 60 : Suspected Homozygous HbE", "EE score <= 60 : สงสัย Homozygous HbE")
             ee_lvl = "info"
         else:
-            ee_interp = "EE score > 60 : Suspected Beta 0 Thalassemia/HbE"
+            ee_interp = tx("EE score > 60 : Suspected Beta 0 Thalassemia/HbE", "EE score > 60 : สงสัย Beta 0 Thalassemia/HbE")
             ee_lvl = "danger"
             
         metric_card(
@@ -337,19 +658,27 @@ if mode == "Single patient consult":
             ee_lvl
         )
    
+    render_hematology_differentials(row, thresholds)
+
     st.markdown("---")
-    section("Partner Screening & Fetal Risk Assessment","ผลเบื้องต้นเพื่อคัดกรองความเสี่ยงโรคธาลัสซีเมียชนิดรุนแรงที่มีโอกาสเป็นในทารก หากทั้งคู่มีความเสี่ยงสูงควรส่งตรวจยืนยันด้วย Hb Typing (HPLC/CZE) และ DNA analysis ของทั้งคู่")
+    section(
+        tx("Partner Screening & Fetal Risk Assessment", "คัดกรองคู่สมรสและประเมินความเสี่ยงทารก"),
+        tx(
+            "Initial screening for severe thalassemia risk in offspring. If both partners are high risk, confirm with Hb Typing (HPLC/CZE) and DNA analysis for both partners.",
+            "ผลเบื้องต้นเพื่อคัดกรองความเสี่ยงโรคธาลัสซีเมียชนิดรุนแรงที่มีโอกาสเป็นในทารก หากทั้งคู่มีความเสี่ยงสูงควรส่งตรวจยืนยันด้วย Hb Typing (HPLC/CZE) และ DNA analysis ของทั้งคู่",
+        ),
+    )
     with st.container(border=True):
         c_partner1, c_partner2 = st.columns(2)
         with c_partner1:
             pat_sex = row.get("sex", "Unknown")
-            st.markdown(f"**Current Patient ({pat_sex})**")
-            st.info(f"OF Test: {row['oft']}  \nDCIP Test: {row['dcip']}")
+            st.markdown(f"**{tx('Current Patient', 'ผู้ป่วยปัจจุบัน')} ({option_label(pat_sex)})**")
+            st.info(f"OF Test: {option_label(row['oft'])}  \nDCIP Test: {option_label(row['dcip'])}")
             
         with c_partner2:
-            st.markdown("**Partner**")
-            p_of = st.radio("Partner OF Test", ["Negative", "Positive"], horizontal=True)
-            p_dcip = st.radio("Partner DCIP Test", ["Negative", "Positive"], horizontal=True)
+            st.markdown(f"**{tx('Partner', 'คู่สมรส')}**")
+            p_of = st.radio(tx("Partner OF Test", "OF Test ของคู่สมรส"), ["Negative", "Positive"], horizontal=True, format_func=option_label)
+            p_dcip = st.radio(tx("Partner DCIP Test", "DCIP Test ของคู่สมรส"), ["Negative", "Positive"], horizontal=True, format_func=option_label)
             
         p1_of_pos = (row["oft"] == "Positive")
         p1_dcip_pos = (row["dcip"] == "Positive")
@@ -372,21 +701,21 @@ if mode == "Single patient consult":
                  
         if risks:
             metric_card(
-                "High Risk Fetus 🚨", 
+                tx("High Risk Fetus", "ทารกมีความเสี่ยงสูง"), 
                 " / ".join(risks), 
-                "Recommended: Proceed to full Hb Typing (HPLC/CZE) & DNA analysis for both partners.", 
+                tx("Recommended: Proceed to full Hb Typing (HPLC/CZE) & DNA analysis for both partners.", "แนะนำส่งตรวจ Hb Typing (HPLC/CZE) และ DNA analysis ของทั้งคู่."), 
                 "danger"
             )
         else:
             metric_card(
-                "Low Risk 🟢", 
-                "No severe thalassemia risk detected", 
-                "Routine ANC care. No further thalassemia testing required unless clinically indicated.", 
+                tx("Low Risk", "ความเสี่ยงต่ำ"), 
+                tx("No severe thalassemia risk detected", "ไม่พบความเสี่ยงธาลัสซีเมียชนิดรุนแรงจากการคัดกรอง"), 
+                tx("Routine ANC care. No further thalassemia testing required unless clinically indicated.", "ดูแลตาม ANC ปกติ และไม่จำเป็นต้องตรวจธาลัสซีเมียต่อ เว้นแต่มีข้อบ่งชี้ทางคลินิก."), 
                 "info"
             )
 
-    section("Screening visual analytics")
-    t1,t2,t3=st.tabs(["Visual consult board","Analytical pattern","Reflex pathway"]); scores={"β-thal trait":result.beta_trait_score,"α-thal/HbH":result.alpha_trait_score,"HbE/variant":result.hbe_score,"Iron deficiency":result.iron_deficiency_score}
+    section(tx("Screening visual analytics", "ภาพรวมเชิงวิเคราะห์"))
+    t1,t2,t3=st.tabs([tx("Visual consult board", "บอร์ดภาพรวม"),tx("Analytical pattern", "รูปแบบวิเคราะห์"),tx("Reflex pathway", "เส้นทางตรวจต่อ")]); scores={"β-thal trait":result.beta_trait_score,"α-thal/HbH":result.alpha_trait_score,"HbE/variant":result.hbe_score,"Iron deficiency":result.iron_deficiency_score}
     with t1:
         st.plotly_chart(score_radar(scores), width='stretch')
         # อัปเดตให้ส่งค่า Bart, HbH, HbCS เข้าไปด้วย
@@ -399,45 +728,45 @@ if mode == "Single patient consult":
         
     with t3: st.plotly_chart(reflex_sankey(result), width='stretch')
 
-    section("Evidence and recommendations")
+    section(tx("Evidence and recommendations", "หลักฐานและคำแนะนำ"))
     ev_col, rec_col = st.columns(2)
     with ev_col:
         with st.container(border=True):
-            st.markdown("**Evidence**")
+            st.markdown(f"**{tx('Evidence', 'หลักฐาน')}**")
             for item in result.evidence:
                 st.markdown(f"- {item}")
     with rec_col:
         with st.container(border=True):
-            st.markdown("**Recommendations**")
+            st.markdown(f"**{tx('Recommendations', 'คำแนะนำ')}**")
             for item in result.recommendations:
                 st.markdown(f"- {item}")
             if result.caveats:
-                st.markdown("**Caveats**")
+                st.markdown(f"**{tx('Caveats', 'ข้อควรระวัง')}**")
                 for item in result.caveats:
                     st.markdown(f"- {item}")
     
-    section("Download consult report")
+    section(tx("Download consult report", "ดาวน์โหลดรายงาน consult"))
     report_md=screening_report_markdown(result); c1,c2=st.columns(2)
-    with c1: st.download_button("Download Markdown report", report_md.encode("utf-8"), f"{result.sample_id}_thal_consult.md", "text/markdown")
-    with c2: st.download_button("Download structured JSON", to_json_bytes(result), f"{result.sample_id}_thal_consult.json", "application/json")
+    with c1: st.download_button(tx("Download Markdown report", "ดาวน์โหลดรายงาน Markdown"), report_md.encode("utf-8"), f"{result.sample_id}_thal_consult.md", "text/markdown")
+    with c2: st.download_button(tx("Download structured JSON", "ดาวน์โหลด JSON"), to_json_bytes(result), f"{result.sample_id}_thal_consult.json", "application/json")
 else:
-    section("Batch CSV dashboard")
-    st.markdown("Upload a CSV with the screening columns below, or use the built-in expert demo dataset.")
-    with st.expander("Required/recommended columns"): pills(SCREENING_COLUMNS,"blue")
-    template=example_screening_dataframe(); st.download_button("Download example screening CSV", template.to_csv(index=False).encode("utf-8"), "example_thalassemia_screening.csv", "text/csv")
-    uploaded=st.file_uploader("Upload screening CSV", type=["csv"]); df=pd.read_csv(uploaded) if uploaded is not None else template; results=analyze_dataframe(df, thresholds)
+    section(tx("Batch CSV dashboard", "แดชบอร์ด CSV หลายราย"))
+    st.markdown(tx("Upload a CSV with the screening columns below, or use the built-in expert demo dataset.", "อัปโหลด CSV ตามคอลัมน์ด้านล่าง หรือใช้ชุดข้อมูลตัวอย่างในระบบ."))
+    with st.expander(tx("Required/recommended columns", "คอลัมน์ที่ต้องมี/แนะนำ")): pills(SCREENING_COLUMNS,"blue")
+    template=example_screening_dataframe(); st.download_button(tx("Download example screening CSV", "ดาวน์โหลด CSV ตัวอย่าง"), template.to_csv(index=False).encode("utf-8"), "example_thalassemia_screening.csv", "text/csv")
+    uploaded=st.file_uploader(tx("Upload screening CSV", "อัปโหลด screening CSV"), type=["csv"]); df=pd.read_csv(uploaded) if uploaded is not None else template; results=analyze_dataframe(df, thresholds)
     ml_results = phenotype_similarity(df)
     results = results.merge(ml_results, on="sample_id", how="left")
     k1,k2,k3,k4=st.columns(4)
-    with k1: metric_card("Samples", str(len(results)), "Rows interpreted", "info")
-    with k2: metric_card("High/Critical", str(int(results["consult_risk"].isin(["High","Critical review"]).sum())), "Reflex-priority samples", "high")
-    with k3: metric_card("ML-ready features", str(len(ml_feature_matrix(df).columns)-1), "Exportable numeric inputs", "moderate")
-    with k4: metric_card("Dominant pattern", str(results["top_pattern"].mode().iloc[0]), "Most frequent top pattern", "low")
-    st.dataframe(results, width='stretch', hide_index=True); st.download_button("Download interpreted batch CSV", results.to_csv(index=False).encode("utf-8"), "thalassemia_screening_interpreted.csv", "text/csv")
-    with st.expander("Download/view ML feature matrix", expanded=False):
+    with k1: metric_card(tx("Samples", "จำนวนตัวอย่าง"), str(len(results)), tx("Rows interpreted", "จำนวนแถวที่แปลผล"), "info")
+    with k2: metric_card(tx("High/Critical", "สูง/วิกฤต"), str(int(results["consult_risk"].isin(["High","Critical review"]).sum())), tx("Reflex-priority samples", "ตัวอย่างที่ควรตรวจต่อก่อน"), "high")
+    with k3: metric_card(tx("ML-ready features", "ตัวแปรพร้อมใช้กับ ML"), str(len(ml_feature_matrix(df).columns)-1), tx("Exportable numeric inputs", "ตัวแปรตัวเลขที่ export ได้"), "moderate")
+    with k4: metric_card(tx("Dominant pattern", "รูปแบบที่พบบ่อยสุด"), clinical_text(str(results["top_pattern"].mode().iloc[0])), tx("Most frequent top pattern", "Top pattern ที่พบบ่อยที่สุด"), "low")
+    st.dataframe(results, width='stretch', hide_index=True); st.download_button(tx("Download interpreted batch CSV", "ดาวน์โหลด CSV ที่แปลผลแล้ว"), results.to_csv(index=False).encode("utf-8"), "thalassemia_screening_interpreted.csv", "text/csv")
+    with st.expander(tx("Download/view ML feature matrix", "ดาวน์โหลด/ดู ML feature matrix"), expanded=False):
         features = ml_feature_matrix(df)
         st.dataframe(features, width='stretch', hide_index=True)
-        st.download_button("Download ML feature matrix CSV", features.to_csv(index=False).encode("utf-8"), "thalassemia_ml_feature_matrix.csv", "text/csv")
+        st.download_button(tx("Download ML feature matrix CSV", "ดาวน์โหลด ML feature matrix CSV"), features.to_csv(index=False).encode("utf-8"), "thalassemia_ml_feature_matrix.csv", "text/csv")
     v1,v2=st.columns(2)
     with v1: st.plotly_chart(batch_risk_distribution(results), width='stretch')
     with v2: st.plotly_chart(score_heatmap(results), width='stretch')
